@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Cobranzas | Sistema de Gestión</title>
+    <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
+    <style>
+        :root { --p: #4f46e5; --s: #10b981; --d: #ef4444; --bg: #f1f5f9; --e: #f59e0b; }
+        body { font-family: 'Segoe UI', sans-serif; background: var(--bg); margin: 0; }
+        
+        .navbar { background: #1e293b; padding: 0 40px; display: flex; gap: 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        .nav-link { color: #94a3b8; padding: 20px; cursor: pointer; border-bottom: 3px solid transparent; font-weight: 600; }
+        .nav-link.active { color: white; border-bottom-color: var(--p); }
+        
+        .container { max-width: 98%; margin: 30px auto; padding: 0 10px; }
+        .card { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); margin-bottom: 20px; }
+        
+        .sucursal-box { border-left: 5px solid #1e293b; padding: 15px; background: white; margin-bottom: 10px; border-radius: 8px; }
+        .caja-box { margin-left: 30px; border-left: 3px solid #cbd5e1; padding: 10px; background: #f8fafc; margin-top: 5px; }
+        .term-row { margin-left: 30px; display: flex; justify-content: space-between; padding: 5px; border-bottom: 1px solid #eee; align-items: center; }
+        
+        .tabla-inf { width: 100%; border-collapse: collapse; font-size: 0.8rem; }
+        .tabla-inf th { background: #1e293b; color: white; padding: 8px; border: 1px solid #334155; }
+        .tabla-inf td { padding: 6px; border: 1px solid #e2e8f0; text-align: center; }
+        
+        .row-caja { background: #f1f5f9; font-weight: bold; }
+        .row-sucursal { background: #e2e8f0; font-weight: bold; }
+        .row-total { background: #1e293b; color: white; font-weight: bold; }
+        
+        .btn { padding: 8px 15px; border-radius: 6px; border: none; cursor: pointer; font-weight: 600; }
+        .btn-p { background: var(--p); color: white; }
+        .btn-s { background: var(--s); color: white; }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+        #toast { position: fixed; top: 20px; right: 20px; padding: 15px; border-radius: 8px; color: white; display: none; z-index: 5000; font-weight: bold; }
+    </style>
+</head>
+<body>
+
+<div id="toast"></div>
+
+<div class="navbar">
+    <div class="nav-link active" onclick="switchTab(event, 'tab-import')">📥 Importar</div>
+    <div class="nav-link" onclick="switchTab(event, 'tab-config')">⚙️ Configuración</div>
+    <div class="nav-link" onclick="switchTab(event, 'tab-informes')">📊 Informes de Venta</div>
+</div>
+
+<div class="container">
+    
+    <div id="tab-import" class="tab-content active">
+        <div class="card">
+            <h2>Carga de Pago Fácil</h2>
+            <input type="file" id="filePF">
+            <button class="btn btn-p" onclick="subirPF()">Procesar Archivo</button>
+        </div>
+    </div>
+
+    <div id="tab-config" class="tab-content">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+            <h1>Estructura de Red</h1>
+            <button class="btn btn-p" onclick="nuevaSucursal()">+ Nueva Sucursal</button>
+        </div>
+        <div id="arbol-container"></div>
+    </div>
+
+    <div id="tab-informes" class="tab-content">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+            <h1>Ventas por Local y Caja</h1>
+            <button class="btn btn-s" onclick="exportarExcel()">📥 Exportar a Excel</button>
+        </div>
+        
+        <div class="card" style="display:flex; gap:10px; align-items:flex-end; flex-wrap:wrap;">
+            <div>Desde: <input type="date" id="fDesde"></div>
+            <div>Hasta: <input type="date" id="fHasta"></div>
+            <div>Sucursal: <select id="fSucursal"><option value="">Todas</option></select></div>
+            <button class="btn btn-p" onclick="cargarInforme()">🔍 Ver Datos</button>
+        </div>
+
+        <div class="card" style="overflow-x:auto;">
+            <table class="tabla-inf" id="tablaInforme">
+                <thead>
+                    <tr>
+                        <th rowspan="2">Fecha</th>
+                        <th rowspan="2">Local / Caja</th>
+                        <th colspan="5">PAGO FÁCIL</th>
+                        <th colspan="5">SEAC</th>
+                        <th colspan="5">COBRO EXPRESS</th>
+                        <th rowspan="2">TOTAL DÍA</th>
+                    </tr>
+                    <tr>
+                        <th>C.Ef</th><th>$ Ef</th><th>C.De</th><th>$ De</th><th>Total</th>
+                        <th>C.Ef</th><th>$ Ef</th><th>C.De</th><th>$ De</th><th>Total</th>
+                        <th>C.Ef</th><th>$ Ef</th><th>C.De</th><th>$ De</th><th>Total</th>
+                    </tr>
+                </thead>
+                <tbody id="tbodyInf"></tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<div id="modalTerminal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); justify-content:center; align-items:center; z-index:2000;">
+    <div class="card" style="width:350px;">
+        <h3 id="modalTitle">Terminal</h3>
+        <input type="hidden" id="modalCajaId"><input type="hidden" id="modalEditId">
+        Empresa: <select id="modalEmpresa" style="width:100%; margin-bottom:10px;"><option>PAGO FÁCIL</option><option>SEAC</option><option>COBRO EXPRESS</option></select>
+        ID: <input type="text" id="modalTermId" style="width:100%; margin-bottom:10px;">
+        <div style="display:flex; gap:5px;">
+            <div>% Ef: <input type="number" id="modalPorc" step="0.0001" style="width:100%;"></div>
+            <div>$ Fi: <input type="number" id="modalFijo" style="width:100%;"></div>
+        </div>
+        <div id="divMover" style="display:none; margin-top:10px;">Mover a: <select id="modalMoverCaja" style="width:100%;"></select></div>
+        <div style="margin-top:15px; display:flex; gap:5px;">
+            <button class="btn btn-p" onclick="guardarTerminal()">Guardar</button>
+            <button class="btn" onclick="document.getElementById('modalTerminal').style.display='none'">Cerrar</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    let rawData = [];
+
+    function notify(msg, err=false) {
+        const t = document.getElementById('toast');
+        t.innerText = msg; t.style.background = err ? 'var(--d)' : 'var(--s)';
+        t.style.display = 'block'; setTimeout(() => t.style.display='none', 3000);
+    }
+
+    function switchTab(e, id) {
+        document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+        document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
+        document.getElementById(id).classList.add('active'); e.target.classList.add('active');
+        if(id === 'tab-config') cargarArbol();
+        if(id === 'tab-informes') { llenarComboSucs(); cargarInforme(); }
+    }
+
+    // --- CONFIGURACIÓN ---
+    async function cargarArbol() {
+        const res = await fetch('/api/arbol-configuracion');
+        rawData = await res.json();
+        const container = document.getElementById('arbol-container'); container.innerHTML = '';
+        const sucursales = {};
+        rawData.forEach(row => {
+            if (!sucursales[row.suc_id]) sucursales[row.suc_id] = { id: row.suc_id, nombre: row.suc_nombre, cajas: {} };
+            if (row.caja_id) {
+                if (!sucursales[row.suc_id].cajas[row.caja_id]) sucursales[row.suc_id].cajas[row.caja_id] = { id: row.caja_id, nombre: row.nombre_caja, terminales: [] };
+                if (row.term_id) sucursales[row.suc_id].cajas[row.caja_id].terminales.push(row);
+            }
+        });
+        for (let sid in sucursales) {
+            const s = sucursales[sid];
+            let h = `<div class="sucursal-box"><div style="display:flex; justify-content:space-between;"><strong>🏛️ ${s.nombre}</strong><div><button class="btn" onclick="editN('sucursales',${s.id},'${s.nombre}')">✏️</button><button class="btn" onclick="nuevaCaja(${s.id})">+ Caja</button><button class="btn" style="color:red" onclick="borrar('sucursales',${s.id})">🗑️</button></div></div>`;
+            for (let cid in s.cajas) {
+                const c = s.cajas[cid];
+                h += `<div class="caja-box"><div style="display:flex; justify-content:space-between;"><span>📦 ${c.nombre}</span><div><button class="btn" onclick="editN('cajas',${c.id},'${c.nombre}')">✏️</button><button class="btn btn-p" onclick="abrirModalTerminal(${c.id})">+ Term</button><button class="btn" onclick="borrar('cajas',${c.id})">🗑️</button></div></div>`;
+                c.terminales.forEach(t => { h += `<div class="term-row"><span>🔹 ${t.empresa}: ${t.identificador_externo}</span><div><button class="btn" onclick="abrirEditarT(${t.term_id})">✏️</button><button class="btn" onclick="borrar('terminales',${t.term_id})">×</button></div></div>`; });
+                h += `</div>`;
+            }
+            h += `</div>`; container.innerHTML += h;
+        }
+    }
+
+    async function editN(t,id,a) { const n = prompt("Nombre:",a); if(n) { await fetch(`/api/${t}/${id}`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({nombre:n})}); cargarArbol(); } }
+    async function borrar(t,id) { if(confirm("¿Seguro?")) { await fetch(`/api/${t}/${id}`,{method:'DELETE'}); cargarArbol(); } }
+    async function nuevaSucursal() { const n = prompt("Nombre:"); if(n) { await fetch('/api/sucursales',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({nombre:n})}); cargarArbol(); } }
+    async function nuevaCaja(sid) { const n = prompt("Nombre:"); if(n) { await fetch('/api/cajas',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sucursal_id:sid, nombre:n})}); cargarArbol(); } }
+    
+    function abrirModalTerminal(cid) { document.getElementById('modalEditId').value=""; document.getElementById('modalCajaId').value=cid; document.getElementById('modalTitle').innerText="Nueva Terminal"; document.getElementById('divMover').style.display='none'; document.getElementById('modalTerminal').style.display='flex'; }
+    function abrirEditarT(tid) {
+        const t = rawData.find(x => x.term_id === tid);
+        document.getElementById('modalEditId').value=tid; document.getElementById('modalTermId').value=t.identificador_externo; document.getElementById('modalEmpresa').value=t.empresa; document.getElementById('modalPorc').value=t.comision_porcentaje; document.getElementById('modalFijo').value=t.comision_fija;
+        const sel = document.getElementById('modalMoverCaja'); sel.innerHTML='';
+        const cjs = [...new Set(rawData.map(x => JSON.stringify({id:x.caja_id, n:x.nombre_caja, s:x.suc_nombre})))].map(x => JSON.parse(x));
+        cjs.forEach(c => sel.innerHTML += `<option value="${c.id}" ${c.id==t.caja_id?'selected':''}>${c.s} > ${c.n}</option>`);
+        document.getElementById('divMover').style.display='block'; document.getElementById('modalTitle').innerText="Editar Terminal"; document.getElementById('modalTerminal').style.display='flex';
+    }
+    async function guardarTerminal() {
+        const eid = document.getElementById('modalEditId').value;
+        const body = { caja_id: eid ? document.getElementById('modalMoverCaja').value : document.getElementById('modalCajaId').value, empresa: document.getElementById('modalEmpresa').value, identificador: document.getElementById('modalTermId').value, porc: document.getElementById('modalPorc').value, fijo: document.getElementById('modalFijo').value };
+        await fetch(eid ? `/api/terminales/${eid}` : '/api/terminales', { method: eid ? 'PUT' : 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(body) });
+        document.getElementById('modalTerminal').style.display='none'; cargarArbol();
+    }
+
+    // --- INFORMES ---
+    async function llenarComboSucs() {
+        const res = await fetch('/api/arbol-configuracion');
+        const data = await res.json();
+        const sel = document.getElementById('fSucursal'); sel.innerHTML='<option value="">Todas</option>';
+        const sucs = [...new Set(data.map(s => JSON.stringify({id:s.suc_id, n:s.suc_nombre})))].map(x => JSON.parse(x));
+        sucs.forEach(s => sel.innerHTML += `<option value="${s.id}">${s.n}</option>`);
+    }
+
+    async function cargarInforme() {
+        const d = document.getElementById('fDesde').value;
+        const h = document.getElementById('fHasta').value;
+        const s = document.getElementById('fSucursal').value;
+        const res = await fetch(`/api/informes?desde=${d}&hasta=${h}&sucursal=${s}`);
+        const data = await res.json();
+        const tbody = document.getElementById('tbodyInf'); tbody.innerHTML = '';
+
+        let totalG = Array(16).fill(0);
+        let currentSuc = null; let currentCaj = null;
+        let subSuc = Array(16).fill(0); let subCaj = Array(16).fill(0);
+
+        function renderRow(label, vals, cls) {
+            let row = `<tr class="${cls}"><td></td><td>${label}</td>`;
+            vals.forEach((v, i) => { 
+                if(i % 5 === 4 || i === 15) row += `<td>$${v.toLocaleString()}</td>`;
+                else if(i % 5 === 0 || i % 5 === 2) row += `<td>${v}</td>`;
+                else row += `<td>$${v.toLocaleString()}</td>`;
+            });
+            return row + `</tr>`;
+        }
+
+        data.forEach((r, idx) => {
+            const vals = [
+                parseInt(r.pf_cant_e), parseFloat(r.pf_monto_e), parseInt(r.pf_cant_d), parseFloat(r.pf_monto_d), parseFloat(r.pf_monto_e) + parseFloat(r.pf_monto_d),
+                parseInt(r.seac_cant_e), parseFloat(r.seac_monto_e), parseInt(r.seac_cant_d), parseFloat(r.seac_monto_d), parseFloat(r.seac_monto_e) + parseFloat(r.seac_monto_d),
+                parseInt(r.ce_cant_e), parseFloat(r.ce_monto_e), parseInt(r.ce_cant_d), parseFloat(r.ce_monto_d), parseFloat(r.ce_monto_e) + parseFloat(r.ce_monto_d),
+                parseFloat(r.pf_monto_e) + parseFloat(r.pf_monto_d) + parseFloat(r.seac_monto_e) + parseFloat(r.seac_monto_d) + parseFloat(r.ce_monto_e) + parseFloat(r.ce_monto_d)
+            ];
+
+            if (currentCaj && currentCaj !== r.caja_id) {
+                tbody.innerHTML += renderRow(`Subtotal Caja: ${data[idx-1].nombre_caja}`, subCaj, 'row-caja');
+                subCaj.fill(0);
+            }
+            if (currentSuc && currentSuc !== r.suc_id) {
+                tbody.innerHTML += renderRow(`Subtotal Sucursal: ${data[idx-1].suc_nombre}`, subSuc, 'row-sucursal');
+                subSuc.fill(0);
+            }
+
+            currentSuc = r.suc_id; currentCaj = r.caja_id;
+            vals.forEach((v, i) => { subCaj[i] += v; subSuc[i] += v; totalG[i] += v; });
+
+            tbody.innerHTML += `<tr><td>${new Date(r.fecha).toLocaleDateString()}</td><td style="text-align:left">${r.suc_nombre} - ${r.nombre_caja}</td>
+                <td>${vals[0]}</td><td>$${vals[1].toLocaleString()}</td><td>${vals[2]}</td><td>$${vals[3].toLocaleString()}</td><td style="background:#f1f5f9">$${vals[4].toLocaleString()}</td>
+                <td>${vals[5]}</td><td>$${vals[6].toLocaleString()}</td><td>${vals[7]}</td><td>$${vals[8].toLocaleString()}</td><td style="background:#f1f5f9">$${vals[9].toLocaleString()}</td>
+                <td>${vals[10]}</td><td>$${vals[11].toLocaleString()}</td><td>${vals[12]}</td><td>$${vals[13].toLocaleString()}</td><td style="background:#f1f5f9">$${vals[14].toLocaleString()}</td>
+                <td style="font-weight:bold">$${vals[15].toLocaleString()}</td></tr>`;
+        });
+
+        if (data.length > 0) {
+            tbody.innerHTML += renderRow(`Subtotal Caja: ${currentCaj}`, subCaj, 'row-caja');
+            tbody.innerHTML += renderRow(`Subtotal Sucursal: ${currentSuc}`, subSuc, 'row-sucursal');
+            tbody.innerHTML += renderRow(`TOTAL GENERAL RED`, totalG, 'row-total');
+        }
+    }
+
+    function exportarExcel() {
+        const table = document.getElementById("tablaInforme");
+        const wb = XLSX.utils.table_to_book(table, { sheet: "Informe Venta" });
+        XLSX.writeFile(wb, "Informe_Ventas.xlsx");
+    }
+
+    async function subirPF() {
+        const f = document.getElementById('filePF').files[0]; if(!f) return;
+        const fd = new FormData(); fd.append('archivo', f);
+        const res = await fetch('/importar/pagofacil', {method:'POST', body:fd});
+        notify((await res.json()).mensaje);
+    }
+</script>
+</body>
+</html>
