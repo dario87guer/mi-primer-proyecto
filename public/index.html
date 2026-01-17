@@ -6,41 +6,35 @@
     <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
     <style>
         :root { --p: #4f46e5; --s: #10b981; --nav: #1e293b; --bg: #f3f4f6; }
-        body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); margin: 0; font-size: 14px; color: #374151; }
+        body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); margin: 0; font-size: 13px; color: #374151; }
         .navbar { background: var(--nav); display: flex; padding: 0 30px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
-        .nav-link { color: #94a3b8; padding: 18px 20px; cursor: pointer; border-bottom: 3px solid transparent; font-weight: 600; transition: 0.2s; }
+        .nav-link { color: #94a3b8; padding: 18px 25px; cursor: pointer; border-bottom: 3px solid transparent; font-weight: 600; }
         .nav-link.active { color: white; border-bottom-color: var(--p); }
-        .container { max-width: 98%; margin: 20px auto; padding: 0 15px; }
-
-        /* Gestión */
-        .grid-config { display: grid; grid-template-columns: repeat(auto-fill, minmax(350px, 1fr)); gap: 15px; }
-        .card-suc { background: white; border-radius: 10px; border: 1px solid #e5e7eb; box-shadow: 0 1px 3px rgba(0,0,0,0.1); overflow: hidden; }
-        .suc-head { padding: 12px 15px; background: #f9fafb; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #edf2f7; }
-        .caja-row { padding: 10px 15px; border-bottom: 1px solid #f3f4f6; }
-        .actions-hidden { opacity: 0; display: flex; gap: 6px; transition: 0.2s; }
-        .card-suc:hover .actions-hidden, .caja-row:hover .actions-hidden { opacity: 1; }
-        .icon-btn { cursor: pointer; padding: 4px 8px; border-radius: 4px; background: #f3f4f6; border: 1px solid #d1d5db; font-size: 0.9rem; }
-        .icon-btn:hover { background: var(--p); color: white; }
-
-        /* Informe */
-        .report-card { background: white; border-radius: 10px; padding: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
-        .tabla-inf { width: 100%; border-collapse: collapse; font-size: 13px; }
-        .tabla-inf th { background: #f8fafc; color: #64748b; font-weight: 700; padding: 10px 8px; border: 1px solid #e2e8f0; text-transform: uppercase; font-size: 11px; }
-        .tabla-inf td { padding: 8px; border: 1px solid #f1f5f9; text-align: center; }
-        
-        .bg-pf { background: #f0f7ff; border-left: 2px solid #3b82f6 !important; }
-        .bg-seac { background: #f0fdf4; border-left: 2px solid #22c55e !important; }
-        .bg-ce { background: #fffbeb; border-left: 2px solid #f59e0b !important; }
-        
-        .row-suc-label { background: #334155 !important; color: white !important; font-weight: bold; text-align: left !important; }
-        .row-grand-total { background: #0f172a !important; color: white !important; font-weight: bold; font-size: 14px; }
-
+        .container { max-width: 99%; margin: 20px auto; padding: 0 10px; }
+        .bloque-empresa { background: white; border-radius: 12px; border: 2px solid #334155; margin-bottom: 30px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
+        .bloque-title { padding: 12px 20px; font-size: 16px; font-weight: bold; color: white; text-transform: uppercase; }
+        .title-seac { background: #10b981; }
+        .title-pf { background: #3b82f6; }
+        .title-ce { background: #f59e0b; }
+        .tabla-inf { width: 100%; border-collapse: collapse; }
+        .tabla-inf th { background: #f8fafc; color: #475569; padding: 10px 5px; border: 1px solid #e2e8f0; text-transform: uppercase; font-size: 9px; }
+        .tabla-inf td { padding: 8px 4px; border: 1px solid #f1f5f9; text-align: center; font-weight: 500; }
+        .row-total-col { background: #f8fafc !important; color: #475569 !important; font-weight: bold !important; border-top: 2px solid #cbd5e1 !important; }
+        .row-total-suc { background: #e2e8f0 !important; color: #1e293b !important; font-weight: 800 !important; }
+        .row-total-final { background: #1e293b !important; color: white !important; font-weight: bold !important; }
+        .bg-pf { background: #f0f7ff; border-left: 1px solid #3b82f6 !important; }
+        .bg-seac { background: #f0fdf4; border-left: 1px solid #22c55e !important; }
+        .bg-ce { background: #fffbeb; border-left: 1px solid #f59e0b !important; }
+        .card-suc { background: white; border-radius: 10px; border: 1px solid #e5e7eb; padding: 15px; margin-bottom: 20px; position: relative; }
         .btn { padding: 8px 16px; border-radius: 6px; border: none; cursor: pointer; font-weight: 600; font-size: 13px; }
         .btn-p { background: var(--p); color: white; }
-        .btn-s { background: var(--s); color: white; }
-
         .tab-content { display: none; }
         .tab-content.active { display: block; }
+        .grid-config { display: grid; grid-template-columns: repeat(auto-fill, minmax(350px, 1fr)); gap: 15px; }
+        .actions { opacity: 0; display: flex; gap: 5px; transition: 0.2s; position: absolute; right: 10px; top: 10px; }
+        .card-suc:hover .actions, div[style*="position:relative"]:hover .actions { opacity: 1; }
+        .icon-btn { cursor: pointer; padding: 3px 6px; border-radius: 4px; background: #f3f4f6; border: 1px solid #d1d5db; }
+        .prog-box { display: none; margin-bottom: 20px; background: white; padding: 15px; border-radius: 8px; border: 1px solid #e2e8f0; }
     </style>
 </head>
 <body onload="initApp()">
@@ -48,98 +42,112 @@
 <div class="navbar">
     <div class="nav-link active" onclick="switchTab(event, 'tab-import')">📥 Importar</div>
     <div class="nav-link" onclick="switchTab(event, 'tab-config')">⚙️ Gestión</div>
-    <div class="nav-link" onclick="switchTab(event, 'tab-informes')">📊 Reportes</div>
+    <div class="nav-link" onclick="switchTab(event, 'tab-informes')">📊 Detalle Diario</div>
+    <div class="nav-link" onclick="switchTab(event, 'tab-mensual')" style="color: #fbbf24">📈 Informe Mensual</div>
 </div>
 
 <div class="container">
+    <div id="prog-box" class="prog-box">
+        <div id="prog-txt" style="font-weight:bold;">Analizando...</div>
+        <div style="background:#e2e8f0; height:10px; border-radius:10px; overflow:hidden; margin-top:8px;"><div id="bar-fill" style="background:var(--p); width:0%; height:100%; transition:0.3s;"></div></div>
+    </div>
+
     <div id="tab-import" class="tab-content active">
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
-            <div class="report-card">
-                <h4 style="margin-top:0">Pago Fácil (.txt)</h4>
-                <input type="file" id="filePF" multiple accept=".txt" style="margin-bottom:15px; display:block">
-                <button class="btn btn-p" onclick="procesar('pagofacil', 'filePF')">Cargar Archivos</button>
-            </div>
-            <div class="report-card">
-                <h4 style="margin-top:0">SEAC (.csv)</h4>
-                <input type="file" id="fileSEAC" multiple accept=".csv" style="margin-bottom:15px; display:block">
-                <button class="btn btn-p" onclick="procesar('seac', 'fileSEAC', 'ventas')">Ventas</button>
-                <button class="btn btn-s" onclick="procesar('seac', 'fileSEAC', 'debitos')">Débitos</button>
-            </div>
-        </div>
-        <div id="prog-box" style="display:none; margin-top:20px; background:white; padding:15px; border-radius:8px; border:1px solid #e2e8f0;">
-            <div id="prog-txt" style="font-weight:bold; margin-bottom:8px">Procesando...</div>
-            <div style="background:#e2e8f0; height:6px; border-radius:10px; overflow:hidden;"><div id="bar-fill" style="background:var(--p); width:0%; height:100%;"></div></div>
+        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px;">
+            <div class="card-suc"><h4>Pago Fácil</h4><input type="file" id="filePF" multiple accept=".txt"><button class="btn btn-p" onclick="procesar('pagofacil', 'filePF')">Cargar PF</button></div>
+            <div class="card-suc"><h4>SEAC</h4><input type="file" id="fileSEAC" multiple accept=".csv"><div style="display:flex; gap:10px;"><button class="btn btn-p" onclick="procesar('seac', 'fileSEAC', 'ventas')">Ventas</button><button class="btn" style="background:#10b981; color:white" onclick="procesar('seac', 'fileSEAC', 'debitos')">Débitos</button></div></div>
+            <div class="card-suc"><h4>Cobro Express</h4><input type="file" id="fileCE" multiple accept=".xlsx"><div style="display:flex; gap:10px;"><button class="btn btn-p" onclick="procesar('cobroexpress', 'fileCE', 'diario')">Diario</button><button class="btn" style="background:#f59e0b; color:white" onclick="procesar('cobroexpress', 'fileCE', 'detallado')">Detalle Mes</button></div></div>
         </div>
     </div>
 
     <div id="tab-config" class="tab-content">
-        <div style="display:flex; justify-content:space-between; margin-bottom:20px; align-items:center;">
-            <h3>Estructura de Red</h3>
-            <button class="btn btn-p" onclick="nuevaSucursal()">+ Sucursal</button>
-        </div>
+        <div style="display:flex; justify-content:space-between; margin-bottom:20px;"><h3>Estructura de Red</h3><button class="btn btn-p" onclick="nuevaSucursal()">+ Sucursal</button></div>
         <div id="grid-arbol" class="grid-config"></div>
     </div>
 
     <div id="tab-informes" class="tab-content">
-        <div class="report-card" style="margin-bottom: 20px; display: flex; gap: 10px; align-items: flex-end; flex-wrap: wrap;">
-            <div>Desde: <input type="date" id="fDesde" style="padding:6px; border-radius:4px; border:1px solid #d1d5db;"></div>
-            <div>Hasta: <input type="date" id="fHasta" style="padding:6px; border-radius:4px; border:1px solid #d1d5db;"></div>
-            <div>Sucursal: <select id="fSuc" style="padding:6px; border-radius:4px; border:1px solid #d1d5db;"></select></div>
-            <div>Empresa: <select id="fEmp" style="padding:6px; border-radius:4px; border:1px solid #d1d5db;"><option value="todas">TODAS</option><option>PAGO FÁCIL</option><option>SEAC</option><option>COBRO EXPRESS</option></select></div>
-            <button class="btn btn-p" onclick="cargarInforme()">🔍 Consultar</button>
-            <button class="btn btn-s" onclick="exportarExcel()">📥 Bajar Excel</button>
+        <div class="card-suc" style="display:flex; gap:10px; align-items:flex-end;">
+            <div>Desde: <input type="date" id="fDesde"></div><div>Hasta: <input type="date" id="fHasta"></div><div>Sucursal: <select id="fSuc"></select></div><button class="btn btn-p" onclick="cargarInforme()">Consultar Diario</button>
         </div>
-        <div class="report-card" style="overflow-x:auto; padding:10px">
-            <table class="tabla-inf" id="tablaInforme">
-                <thead id="theadInf"></thead>
-                <tbody id="tbodyInf"></tbody>
-            </table>
-        </div>
+        <div id="contenedorInformes"></div>
     </div>
-</div>
 
-<div id="modalTerm" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); justify-content:center; align-items:center; z-index:9999;">
-    <div class="report-card" style="width:350px;">
-        <h4 id="modalTitle">Terminal</h4>
-        <input type="hidden" id="mCajaId"><input type="hidden" id="mEditId">
-        <div style="margin-bottom:10px">Empresa:<br><select id="mEmp" style="width:100%; padding:8px;"><option>PAGO FÁCIL</option><option>SEAC</option><option>COBRO EXPRESS</option></select></div>
-        <div style="margin-bottom:15px">ID Externo (PDV):<br><input type="text" id="mId" style="width:100%; padding:8px;"></div>
-        <div style="display:flex; gap:10px;">
-            <button class="btn btn-p" style="flex:1" onclick="guardarTerm()">Guardar</button>
-            <button class="btn" style="background:#e2e8f0" onclick="document.getElementById('modalTerm').style.display='none'">Cerrar</button>
+    <div id="tab-mensual" class="tab-content">
+        <div class="card-suc" style="display:flex; gap:10px; align-items:flex-end;">
+            <div>Desde: <input type="date" id="mDesde"></div><div>Hasta: <input type="date" id="mHasta"></div><button class="btn btn-p" onclick="cargarMensual()">Generar Informe Mensual</button>
         </div>
+        <div id="contenedorMensual"></div>
     </div>
 </div>
 
 <script>
     let rawData = [];
-    function initApp() {
-        const h = new Date();
-        document.getElementById('fDesde').value = new Date(h.getFullYear(), h.getMonth(), 1).toISOString().split('T')[0];
-        document.getElementById('fHasta').value = new Date(h.getFullYear(), h.getMonth() + 1, 0).toISOString().split('T')[0];
-        cargarArbol();
+    function fmt(n) { if(n === undefined || n === null || n === 0 || n === "0") return "0,00"; return new Intl.NumberFormat('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(n); }
+
+    async function cargarMensual() {
+        const res = await (await fetch(`/api/informes?desde=${document.getElementById('mDesde').value}&hasta=${document.getElementById('mHasta').value}&sucursal=todas`)).json();
+        const cont = document.getElementById('contenedorMensual'); cont.innerHTML = '';
+        const dataEmp = { "seac": { title: "SEAC", class: "title-seac", locales: {}, cols: 5 }, "pf": { title: "PAGO FÁCIL", class: "title-pf", locales: {}, cols: 5 }, "ce": { title: "COBRO EXPRESS", class: "title-ce", locales: {}, cols: 7 } };
+        res.forEach(r => {
+            if(!dataEmp.seac.locales[r.suc_nombre]) dataEmp.seac.locales[r.suc_nombre] = Array(5).fill(0);
+            if(!dataEmp.pf.locales[r.suc_nombre]) dataEmp.pf.locales[r.suc_nombre] = Array(5).fill(0);
+            if(!dataEmp.ce.locales[r.suc_nombre]) dataEmp.ce.locales[r.suc_nombre] = Array(7).fill(0);
+            dataEmp.seac.locales[r.suc_nombre][0] += parseFloat(r.seac_cant_e || 0); dataEmp.seac.locales[r.suc_nombre][1] += parseFloat(r.seac_monto_e || 0); dataEmp.seac.locales[r.suc_nombre][2] += parseFloat(r.seac_cant_d || 0); dataEmp.seac.locales[r.suc_nombre][3] += parseFloat(r.seac_monto_d || 0); dataEmp.seac.locales[r.suc_nombre][4] += (parseFloat(r.seac_monto_e || 0) + parseFloat(r.seac_monto_d || 0));
+            dataEmp.pf.locales[r.suc_nombre][0] += parseFloat(r.pf_cant_e || 0); dataEmp.pf.locales[r.suc_nombre][1] += parseFloat(r.pf_monto_e || 0); dataEmp.pf.locales[r.suc_nombre][2] += parseFloat(r.pf_cant_d || 0); dataEmp.pf.locales[r.suc_nombre][3] += parseFloat(r.pf_monto_d || 0); dataEmp.pf.locales[r.suc_nombre][4] += (parseFloat(r.pf_monto_e || 0) + parseFloat(r.pf_monto_d || 0));
+            dataEmp.ce.locales[r.suc_nombre][0] += parseFloat(r.ce_cant_e || 0); dataEmp.ce.locales[r.suc_nombre][1] += parseFloat(r.ce_monto_e || 0); dataEmp.ce.locales[r.suc_nombre][2] += parseFloat(r.ce_extra_e || 0); dataEmp.ce.locales[r.suc_nombre][3] += parseFloat(r.ce_cant_d || 0); dataEmp.ce.locales[r.suc_nombre][4] += parseFloat(r.ce_monto_d || 0); dataEmp.ce.locales[r.suc_nombre][5] += parseFloat(r.ce_extra_d || 0); dataEmp.ce.locales[r.suc_nombre][6] += (parseFloat(r.ce_monto_e || 0) + parseFloat(r.ce_extra_e || 0) + parseFloat(r.ce_monto_d || 0) + parseFloat(r.ce_extra_d || 0));
+        });
+        for (let key in dataEmp) {
+            const emp = dataEmp[key]; let html = `<div class="bloque-empresa"><div class="bloque-title ${emp.class}">${emp.title} - TOTALES POR LOCAL</div><table class="tabla-inf"><thead><tr><th>LOCAL</th><th>CANTIDAD EFECTIVO</th><th>MONTO EFECTIVO</th>${key==='ce'?'<th>EXTRA EFECTIVO</th>':''}<th>CANTIDAD DEBITO</th><th>MONTO DEBITO</th>${key==='ce'?'<th>EXTRA DEBITO</th>':''}<th>SUBTOTAL</th></tr></thead><tbody>`;
+            let finalT = Array(emp.cols).fill(0);
+            for (let loc in emp.locales) { const v = emp.locales[loc]; html += `<tr><td style="text-align:left; font-weight:bold">${loc}</td>`; v.forEach((val, i) => { html += `<td>${fmt(val)}</td>`; finalT[i] += val; }); html += `</tr>`; }
+            html += `<tr class="row-total-final"><td style="text-align:left">TOTAL GENERAL ${emp.title}</td>`; finalT.forEach((t, i) => html += `<td>${fmt(t)}</td>`);
+            html += `</tr></tbody></table></div>`; cont.innerHTML += html;
+        }
+    }
+
+    async function cargarInforme() {
+        const res = await (await fetch(`/api/informes?desde=${document.getElementById('fDesde').value}&hasta=${document.getElementById('fHasta').value}&sucursal=${document.getElementById('fSuc').value}`)).json();
+        const cont = document.getElementById('contenedorInformes'); cont.innerHTML = '';
+        const sucs = {}; res.forEach(r => { if(!sucs[r.suc_nombre]) sucs[r.suc_nombre] = []; sucs[r.suc_nombre].push(r); });
+        for (let sNombre in sucs) {
+            let html = `<div class="bloque-empresa"><div class="bloque-title" style="background:#334155">LOCAL: ${sNombre}</div><table class="tabla-inf"><thead><tr><th rowspan="2">FECHA</th><th rowspan="2">CAJA</th><th colspan="4" class="bg-pf">PAGO FÁCIL</th><th colspan="4" class="bg-seac">SEAC</th><th colspan="6" class="bg-ce">COBRO EXPRESS</th><th rowspan="2">SUBTOTAL</th></tr><tr><th class="bg-pf">C.EF</th><th class="bg-pf">$ EF</th><th class="bg-pf">C.DE</th><th class="bg-pf">$ DE</th><th class="bg-seac">C.EF</th><th class="bg-seac">$ EF</th><th class="bg-seac">C.DE</th><th class="bg-seac">$ DE</th><th class="bg-ce">C.EF</th><th class="bg-ce">$ EF</th><th class="bg-ce">EXT E</th><th class="bg-ce">C.DE</th><th class="bg-ce">$ DE</th><th class="bg-ce">EXT D</th></tr></thead><tbody>`;
+            let st = Array(18).fill(0);
+            sucs[sNombre].forEach(r => {
+                const v = [r.pf_cant_e, r.pf_monto_e, r.pf_cant_d, r.pf_monto_d, r.seac_cant_e, r.seac_monto_e, r.seac_cant_d, r.seac_monto_d, r.ce_cant_e, r.ce_monto_e, r.ce_extra_e, r.ce_cant_d, r.ce_monto_d, r.ce_extra_d];
+                const subT = (parseFloat(r.pf_monto_e)+parseFloat(r.pf_monto_d)) + (parseFloat(r.seac_monto_e)+parseFloat(r.seac_monto_d)) + (parseFloat(r.ce_monto_e)+parseFloat(r.ce_extra_e)+parseFloat(r.ce_monto_d)+parseFloat(r.ce_extra_d));
+                v.forEach((val, i) => st[i] += parseFloat(val || 0)); st[14] += subT;
+                html += `<tr><td>${new Date(r.fecha).toLocaleDateString()}</td><td style="text-align:left">${r.nombre_caja}</td><td class="bg-pf">${parseInt(v[0])}</td><td class="bg-pf">${fmt(v[1])}</td><td class="bg-pf">${parseInt(v[2])}</td><td class="bg-pf">${fmt(v[3])}</td><td class="bg-seac">${parseInt(v[4])}</td><td class="bg-seac">${fmt(v[5])}</td><td class="bg-seac">${parseInt(v[6])}</td><td class="bg-seac">${fmt(v[7])}</td><td class="bg-ce">${parseInt(v[8])}</td><td class="bg-ce">${fmt(v[9])}</td><td class="bg-ce">${fmt(v[10])}</td><td class="bg-ce">${parseInt(v[11])}</td><td class="bg-ce">${fmt(v[12])}</td><td class="bg-ce">${fmt(v[13])}</td><td style="font-weight:bold">${fmt(subT)}</td></tr>`;
+            });
+            
+            // FILA 1: TOTALES POR COLUMNA (Como estaba antes)
+            html += `<tr class="row-total-col"><td colspan="2">TOTAL COLUMNAS</td><td class="bg-pf">${parseInt(st[0])}</td><td class="bg-pf">${fmt(st[1])}</td><td class="bg-pf">${parseInt(st[2])}</td><td class="bg-pf">${fmt(st[3])}</td><td class="bg-seac">${parseInt(st[4])}</td><td class="bg-seac">${fmt(st[5])}</td><td class="bg-seac">${parseInt(st[6])}</td><td class="bg-seac">${fmt(st[7])}</td><td class="bg-ce">${parseInt(st[8])}</td><td class="bg-ce">${fmt(st[9])}</td><td class="bg-ce">${fmt(st[10])}</td><td class="bg-ce">${parseInt(st[11])}</td><td class="bg-ce">${fmt(st[12])}</td><td class="bg-ce">${fmt(st[13])}</td><td class="row-total-final">${fmt(st[14])}</td></tr>`;
+            
+            // FILA 2: RESUMEN LOCAL (Sumas unificadas)
+            const cantE = st[0]+st[4]+st[8]; const impE = st[1]+st[5]+st[9]+st[10];
+            const cantD = st[2]+st[6]+st[11]; const impD = st[3]+st[7]+st[12]+st[13];
+            html += `<tr class="row-total-suc"><td colspan="2">RESUMEN POR PAGO</td><td colspan="2" class="bg-pf" style="text-align:right">CANT. EFECTIVO: ${cantE}</td><td colspan="2" class="bg-pf" style="text-align:left">IMPORTE EF: ${fmt(impE)}</td><td colspan="2" class="bg-seac" style="text-align:right">CANT. DÉBITO: ${cantD}</td><td colspan="2" class="bg-seac" style="text-align:left">IMPORTE DEB: ${fmt(impD)}</td><td colspan="6" style="text-align:right">TOTAL LOCAL</td><td class="row-total-final">${fmt(st[14])}</td></tr>`;
+            
+            html += `</tbody></table></div>`;
+            cont.innerHTML += html;
+        }
     }
 
     async function procesar(ruta, inId, tipo = null) {
-        const files = document.getElementById(inId).files;
-        if (files.length === 0) return alert("Selecciona archivos");
-        const pBox = document.getElementById('prog-box'), pBar = document.getElementById('bar-fill');
-        pBox.style.display = 'block';
-        let n=0, r=0, i_ign=0;
-        for (let i = 0; i < files.length; i++) {
-            const fd = new FormData(); fd.append('archivo', files[i]); if(tipo) fd.append('tipo', tipo);
-            pBar.style.width = ((i+1)/files.length*100) + '%';
-            const res = await (await fetch(`/importar/${ruta}`, { method:'POST', body:fd })).json();
-            n += res.nuevos; r += res.repetidos; i_ign += res.ignorados;
+        const f = document.getElementById(inId).files; if (f.length === 0) return alert("Seleccione archivos");
+        const pBox = document.getElementById('prog-box'), pFill = document.getElementById('bar-fill'), pTxt = document.getElementById('prog-txt');
+        pBox.style.display = 'block'; let n=0, r=0, er=0;
+        for (let i = 0; i < f.length; i++) {
+            const perc = Math.round(((i+1)/f.length)*100); pTxt.innerText = `Procesando: ${f[i].name} (${perc}%)`; pFill.style.width = perc + '%';
+            const fd = new FormData(); fd.append('archivo', f[i]); if(tipo) fd.append('tipo', tipo);
+            try { const res = await fetch(`/importar/${ruta}`, { method:'POST', body:fd }); const d = await res.json(); n += (d.nuevos || 0); r += (d.repetidos || 0); er += (d.errores || 0); } catch(ex) { er++; }
         }
-        alert(`Carga Finalizada:\nNuevos: ${n}\nRepetidos: ${r}\nNo configurados: ${i_ign}`);
-        pBox.style.display = 'none';
+        alert(`RESULTADO: Nuevos: ${n} | Repetidos: ${r} | Errores: ${er}`); pBox.style.display = 'none';
     }
 
     async function cargarArbol() {
         const data = await (await fetch('/api/arbol-configuracion')).json(); rawData = data;
         const grid = document.getElementById('grid-arbol'); grid.innerHTML = '';
-        const comboSuc = document.getElementById('fSuc'); comboSuc.innerHTML = '<option value="todas">Todas las Sucursales</option>';
+        const comboSuc = document.getElementById('fSuc'); comboSuc.innerHTML = '<option value="todas">Todas</option>';
         const sucs = {};
         data.forEach(r => {
             if (!sucs[r.suc_id]) { sucs[r.suc_id] = { id: r.suc_id, nombre: r.suc_nombre, cajas: {} }; comboSuc.innerHTML += `<option value="${r.suc_id}">${r.suc_nombre}</option>`; }
@@ -148,72 +156,21 @@
         });
         for (let sid in sucs) {
             const s = sucs[sid];
-            let h = `<div class="card-suc"><div class="suc-head"><strong>${s.nombre}</strong><div class="actions-hidden"><button class="icon-btn" onclick="editN('sucursales',${s.id},'${s.nombre}')">✏️</button><button class="icon-btn" onclick="nuevaCaja(${s.id})">+ Caja</button><button class="icon-btn" onclick="borrar('sucursales',${s.id})">🗑️</button></div></div>`;
+            let h = `<div class="card-suc"><div class="suc-head"><strong>🏛️ ${s.nombre}</strong><div class="actions"><button class="icon-btn" onclick="editN('sucursales',${s.id},'${s.nombre}')">✏️</button><button class="icon-btn" onclick="nuevaCaja(${s.id})">➕</button><button class="icon-btn" onclick="borrar('sucursales',${s.id})">🗑️</button></div></div>`;
             for (let cid in s.cajas) {
                 const c = s.cajas[cid];
-                h += `<div class="caja-row"><div style="display:flex; justify-content:space-between; align-items:center;"><span>📦 ${c.nombre}</span><div class="actions-hidden"><button class="icon-btn" onclick="abrirModal(${c.id})">+ Term</button><button class="icon-btn" onclick="editN('cajas',${c.id},'${c.nombre}')">✏️</button><button class="icon-btn" onclick="borrar('cajas',${c.id})">🗑️</button></div></div>`;
-                c.terminales.forEach(t => { h += `<div style="display:flex; justify-content:space-between; font-size:12px; margin-top:5px; color:#6b7280;"><span>🔹 ${t.empresa}: ${t.identificador_externo}</span><div class="actions-hidden"><span style="cursor:pointer" onclick="abrirEditT(${t.term_id})">✏️</span><span style="cursor:pointer" onclick="borrar('terminales',${t.term_id})">🗑️</span></div></div>`; });
-                h += `</div>`;
+                h += `<div style="padding:10px; border-bottom:1px solid #f3f4f6; position:relative;"><span>📦 ${c.nombre}</span><div class="actions" style="opacity:1"><button class="icon-btn" onclick="abrirModal(${c.id})">➕</button><button class="icon-btn" onclick="editN('cajas',${c.id},'${c.nombre}')">✏️</button><button class="icon-btn" onclick="borrar('cajas',${c.id})">🗑️</button></div></div>`;
             }
             h += `</div>`; grid.innerHTML += h;
         }
     }
 
-    async function cargarInforme() {
-        const emp = document.getElementById('fEmp').value;
-        const res = await (await fetch(`/api/informes?desde=${document.getElementById('fDesde').value}&hasta=${document.getElementById('fHasta').value}&sucursal=${document.getElementById('fSuc').value}`)).json();
-        const thead = document.getElementById('theadInf'); const tbody = document.getElementById('tbodyInf');
-        let h = `<tr><th rowspan="2">Fecha</th><th rowspan="2">Caja</th>`;
-        if(emp==='todas' || emp==='PAGO FÁCIL') h += `<th colspan="5" style="border-left:2px solid #3b82f6">PAGO FÁCIL</th>`;
-        if(emp==='todas' || emp==='SEAC') h += `<th colspan="5" style="border-left:2px solid #22c55e">SEAC</th>`;
-        if(emp==='todas' || emp==='COBRO EXPRESS') h += `<th colspan="5" style="border-left:2px solid #f59e0b">COBRO EXPRESS</th>`;
-        h += `<th rowspan="2" style="background:#1e293b; color:white">Total</th></tr><tr>`;
-        const sub = `<th>C.Ef</th><th>$ Ef</th><th>C.De</th><th>$ De</th><th style="background:#f1f5f9">Sub</th>`;
-        if(emp==='todas' || emp==='PAGO FÁCIL') h += sub; if(emp==='todas' || emp==='SEAC') h += sub; if(emp==='todas' || emp==='COBRO EXPRESS') h += sub;
-        thead.innerHTML = h + `</tr>`;
-        tbody.innerHTML = ''; let currentS = null; let gT = Array(16).fill(0);
-        res.forEach(r => {
-            if (currentS !== r.suc_nombre) { tbody.innerHTML += `<tr><td colspan="20" class="row-suc-label">SUCURSAL: ${r.suc_nombre}</td></tr>`; currentS = r.suc_nombre; }
-            const v = [r.pf_cant_e, r.pf_monto_e, r.pf_cant_d, r.pf_monto_d, parseFloat(r.pf_monto_e)+parseFloat(r.pf_monto_d), r.seac_cant_e, r.seac_monto_e, r.seac_cant_d, r.seac_monto_d, parseFloat(r.seac_monto_e)+parseFloat(r.seac_monto_d), r.ce_cant_e, r.ce_monto_e, r.ce_cant_d, r.ce_monto_d, parseFloat(r.ce_monto_e)+parseFloat(r.ce_monto_d)];
-            v.forEach((val, idx) => gT[idx] += parseFloat(val || 0)); let tF = v[4]+v[9]+v[14]; gT[15] += tF;
-            let row = `<tr><td>${new Date(r.fecha).toLocaleDateString()}</td><td style="text-align:left">${r.nombre_caja}</td>`;
-            if(emp==='todas' || emp==='PAGO FÁCIL') row += `<td class="bg-pf">${v[0]}</td><td class="bg-pf">$${v[1]}</td><td class="bg-pf">${v[2]}</td><td class="bg-pf">$${v[3]}</td><td class="bg-pf"><strong>$${v[4]}</strong></td>`;
-            if(emp==='todas' || emp==='SEAC') row += `<td class="bg-seac">${v[5]}</td><td class="bg-seac">$${v[6]}</td><td class="bg-seac">${v[7]}</td><td class="bg-seac">$${v[8]}</td><td class="bg-seac"><strong>$${v[9]}</strong></td>`;
-            if(emp==='todas' || emp==='COBRO EXPRESS') row += `<td class="bg-ce">${v[10]}</td><td class="bg-ce">$${v[11]}</td><td class="bg-ce">${v[12]}</td><td class="bg-ce">$${v[13]}</td><td class="bg-ce"><strong>$${v[14]}</strong></td>`;
-            tbody.innerHTML += row + `<td style="font-weight:bold; background:#f8fafc">$${tF.toLocaleString()}</td></tr>`;
-        });
-        if(res.length > 0) {
-            let foot = `<tr class="row-grand-total"><td colspan="2">TOTAL GENERAL</td>`;
-            if(emp==='todas' || emp==='PAGO FÁCIL') foot += `<td>${gT[0]}</td><td>$${gT[1]}</td><td>${gT[2]}</td><td>$${gT[3]}</td><td>$${gT[4]}</td>`;
-            if(emp==='todas' || emp==='SEAC') foot += `<td>${gT[5]}</td><td>$${gT[6]}</td><td>${gT[7]}</td><td>$${gT[8]}</td><td>$${gT[9]}</td>`;
-            if(emp==='todas' || emp==='COBRO EXPRESS') foot += `<td>${gT[10]}</td><td>$${gT[11]}</td><td>${gT[12]}</td><td>$${gT[13]}</td><td>$${gT[14]}</td>`;
-            tbody.innerHTML += foot + `<td>$${gT[15].toLocaleString()}</td></tr>`;
-        }
-    }
-
-    function exportarExcel() { 
-        const wb = XLSX.utils.table_to_book(document.getElementById("tablaInforme"));
-        XLSX.writeFile(wb, `Reporte_Cobranzas_${new Date().toLocaleDateString()}.xlsx`); 
-    }
-
-    function switchTab(e, id) {
-        document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
-        document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
-        document.getElementById(id).classList.add('active'); e.target.classList.add('active');
-        if(id === 'tab-config') cargarArbol();
-    }
-    async function editN(t,id,a) { const n = prompt("Nombre:",a); if(n) { await fetch(`/api/${t}/${id}`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({nombre:n})}); cargarArbol(); } }
+    function initApp() { const h = new Date(); const fI = new Date(h.getFullYear(), h.getMonth(), 1).toISOString().split('T')[0]; const fF = new Date(h.getFullYear(), h.getMonth() + 1, 0).toISOString().split('T')[0]; document.getElementById('fDesde').value = fI; document.getElementById('fHasta').value = fF; document.getElementById('mDesde').value = fI; document.getElementById('mHasta').value = fF; cargarArbol(); }
+    function switchTab(e, id) { document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active')); document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active')); document.getElementById(id).classList.add('active'); e.target.classList.add('active'); if(id === 'tab-config') cargarArbol(); }
+    async function editN(t,id,a) { const n = prompt("Editar:",a); if(n) { await fetch(`/api/${t}/${id}`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({nombre:n})}); cargarArbol(); } }
     async function borrar(t,id) { if(confirm("¿Eliminar?")) { await fetch(`/api/${t}/${id}`,{method:'DELETE'}); cargarArbol(); } }
     async function nuevaCaja(sid) { const n = prompt("Nombre caja:"); if(n) { await fetch('/api/cajas',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sucursal_id:sid, nombre:n})}); cargarArbol(); } }
     async function nuevaSucursal() { const n = prompt("Nombre sucursal:"); if(n) { await fetch('/api/sucursales',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({nombre:n})}); cargarArbol(); } }
-    function abrirModal(cid) { document.getElementById('mEditId').value=""; document.getElementById('mCajaId').value=cid; document.getElementById('modalTerm').style.display='flex'; }
-    function abrirEditT(tid) { const t = rawData.find(x => x.term_id === tid); document.getElementById('mEditId').value=tid; document.getElementById('mId').value=t.identificador_externo; document.getElementById('mEmp').value=t.empresa; document.getElementById('modalTerm').style.display='flex'; }
-    async function guardarTerm() {
-        const eid = document.getElementById('mEditId').value;
-        const b = { caja_id: document.getElementById('mCajaId').value, empresa: document.getElementById('mEmp').value, identificador: document.getElementById('mId').value };
-        await fetch(eid ? `/api/terminales/${eid}` : '/api/terminales', { method: eid?'PUT':'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(b) });
-        document.getElementById('modalTerm').style.display='none'; cargarArbol();
-    }
 </script>
 </body>
 </html>
