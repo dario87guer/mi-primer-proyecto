@@ -6,83 +6,191 @@
     <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
     <style>
         :root { --p: #4f46e5; --s: #10b981; --nav: #1e293b; --bg: #f3f4f6; }
-        body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); margin: 0; font-size: 13px; color: #374151; }
+        body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); margin: 0; font-size: 14px; color: #374151; }
         .navbar { background: var(--nav); display: flex; padding: 0 30px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
         .nav-link { color: #94a3b8; padding: 18px 25px; cursor: pointer; border-bottom: 3px solid transparent; font-weight: 600; }
         .nav-link.active { color: white; border-bottom-color: var(--p); }
         .container { max-width: 99%; margin: 20px auto; padding: 0 10px; }
-        .bloque-empresa { background: white; border-radius: 12px; border: 2px solid #334155; margin-bottom: 30px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
+
+        /* --- GRID DE IMPORTACIÓN --- */
+        .grid-superior { display: grid; grid-template-columns: 1fr 1fr; gap: 25px; margin-bottom: 25px; }
+        .grid-inferior { display: block; width: 100%; }
+
+        .card-upload { background: white; border-radius: 15px; border: 1px solid #e5e7eb; padding: 25px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); position: relative; margin-bottom: 15px; }
+        .card-upload h4 { margin-top: 0; font-size: 20px; color: #1e293b; display: flex; align-items: center; gap: 10px; border-bottom: 1px solid #f1f5f9; padding-bottom: 10px; }
+        
+        .file-input { width: 100%; padding: 12px; border: 2px dashed #cbd5e1; border-radius: 10px; margin: 15px 0; cursor: pointer; background: #f8fafc; box-sizing: border-box; }
+        
+        .result-box { display: none; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 12px; margin-bottom: 15px; font-size: 13px; color: #166534; position: relative; }
+        .btn-clear { position: absolute; right: 10px; top: 10px; background: #ef4444; color: white; border: none; padding: 4px 8px; border-radius: 4px; font-size: 10px; cursor: pointer; }
+
+        .btn-group { display: flex; gap: 12px; }
+        .btn { padding: 12px 20px; border-radius: 8px; border: none; cursor: pointer; font-weight: 700; font-size: 14px; flex: 1; transition: 0.2s; }
+        .btn-p { background: var(--p); color: white; }
+        .btn-s { background: var(--s); color: white; }
+        .btn-ce { background: #f59e0b; color: white; }
+
+        /* --- BOTONES RED --- */
+        .icon-btn { background: #f1f5f9; border: none; cursor: pointer; padding: 6px; border-radius: 6px; transition: 0.2s; font-size: 14px; }
+        .icon-btn:hover { background: #e2e8f0; }
+        .btn-edit { color: #d97706; }
+        .btn-del { color: #dc2626; }
+        .btn-add { color: #059669; }
+
+        /* --- TABLAS E INFORMES --- */
+        .bloque-empresa { background: white; border-radius: 12px; border: 1px solid #cbd5e1; margin-bottom: 30px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
         .bloque-title { padding: 12px 20px; font-size: 16px; font-weight: bold; color: white; text-transform: uppercase; }
         .title-seac { background: #10b981; }
         .title-pf { background: #3b82f6; }
         .title-ce { background: #f59e0b; }
+        
         .tabla-inf { width: 100%; border-collapse: collapse; }
-        .tabla-inf th { background: #f8fafc; color: #475569; padding: 10px 5px; border: 1px solid #e2e8f0; text-transform: uppercase; font-size: 9px; }
-        .tabla-inf td { padding: 8px 4px; border: 1px solid #f1f5f9; text-align: center; font-weight: 500; }
-        .row-total-col { background: #f8fafc !important; color: #475569 !important; font-weight: bold !important; border-top: 2px solid #cbd5e1 !important; }
-        .row-total-suc { background: #e2e8f0 !important; color: #1e293b !important; font-weight: 800 !important; }
+        .tabla-inf th { background: #f8fafc; color: #475569; padding: 10px 5px; border: 1px solid #e2e8f0; text-transform: uppercase; font-size: 10px; }
+        .tabla-inf td { padding: 8px 4px; border: 1px solid #f1f5f9; text-align: center; font-weight: 500; font-size: 12px; }
+        
+        .row-total-col { background: #f8fafc !important; font-weight: bold !important; border-top: 2px solid #cbd5e1 !important; }
+        .row-total-suc { background: #e2e8f0 !important; font-weight: 800 !important; }
         .row-total-final { background: #1e293b !important; color: white !important; font-weight: bold !important; }
-        .bg-pf { background: #f0f7ff; border-left: 1px solid #3b82f6 !important; }
-        .bg-seac { background: #f0fdf4; border-left: 1px solid #22c55e !important; }
-        .bg-ce { background: #fffbeb; border-left: 1px solid #f59e0b !important; }
-        .card-suc { background: white; border-radius: 10px; border: 1px solid #e5e7eb; padding: 15px; margin-bottom: 20px; position: relative; }
-        .btn { padding: 8px 16px; border-radius: 6px; border: none; cursor: pointer; font-weight: 600; font-size: 13px; }
-        .btn-p { background: var(--p); color: white; }
-        .tab-content { display: none; }
-        .tab-content.active { display: block; }
-        .grid-config { display: grid; grid-template-columns: repeat(auto-fill, minmax(350px, 1fr)); gap: 15px; }
-        .actions { opacity: 0; display: flex; gap: 5px; transition: 0.2s; position: absolute; right: 10px; top: 10px; }
-        .card-suc:hover .actions, div[style*="position:relative"]:hover .actions { opacity: 1; }
-        .icon-btn { cursor: pointer; padding: 3px 6px; border-radius: 4px; background: #f3f4f6; border: 1px solid #d1d5db; }
-        .prog-box { display: none; margin-bottom: 20px; background: white; padding: 15px; border-radius: 8px; border: 1px solid #e2e8f0; }
+        
+        .bg-pf { background: #f0f7ff; }
+        .bg-seac { background: #f0fdf4; }
+        .bg-ce { background: #fffbeb; }
+
+        /* --- MODAL --- */
+        .modal { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); align-items:center; justify-content:center; z-index:1000; }
+        .modal-content { background:white; padding:25px; border-radius:15px; width:400px; }
+
+        .tab-content { display: none; } .tab-content.active { display: block; }
+        .grid-config { display: grid; grid-template-columns: repeat(auto-fill, minmax(350px, 1fr)); gap: 20px; }
     </style>
 </head>
 <body onload="initApp()">
 
 <div class="navbar">
-    <div class="nav-link active" onclick="switchTab(event, 'tab-import')">📥 Importar</div>
-    <div class="nav-link" onclick="switchTab(event, 'tab-config')">⚙️ Gestión</div>
+    <div class="nav-link active" onclick="switchTab(event, 'tab-import')">📥 Importar Archivos</div>
+    <div class="nav-link" onclick="switchTab(event, 'tab-config')">⚙️ Gestión de Red</div>
     <div class="nav-link" onclick="switchTab(event, 'tab-informes')">📊 Detalle Diario</div>
     <div class="nav-link" onclick="switchTab(event, 'tab-mensual')" style="color: #fbbf24">📈 Informe Mensual</div>
 </div>
 
 <div class="container">
-    <div id="prog-box" class="prog-box">
-        <div id="prog-txt" style="font-weight:bold;">Analizando...</div>
-        <div style="background:#e2e8f0; height:10px; border-radius:10px; overflow:hidden; margin-top:8px;"><div id="bar-fill" style="background:var(--p); width:0%; height:100%; transition:0.3s;"></div></div>
+    <div id="prog-box" class="card-upload" style="display:none; text-align:center;">
+        <div id="prog-txt" style="font-weight:bold; font-size: 16px; margin-bottom:10px;">Procesando...</div>
+        <div style="background:#e2e8f0; height:12px; border-radius:10px; overflow:hidden;">
+            <div id="bar-fill" style="background:var(--p); width:0%; height:100%; transition:0.3s;"></div>
+        </div>
     </div>
 
     <div id="tab-import" class="tab-content active">
-        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px;">
-            <div class="card-suc"><h4>Pago Fácil</h4><input type="file" id="filePF" multiple accept=".txt"><button class="btn btn-p" onclick="procesar('pagofacil', 'filePF')">Cargar PF</button></div>
-            <div class="card-suc"><h4>SEAC</h4><input type="file" id="fileSEAC" multiple accept=".csv"><div style="display:flex; gap:10px;"><button class="btn btn-p" onclick="procesar('seac', 'fileSEAC', 'ventas')">Ventas</button><button class="btn" style="background:#10b981; color:white" onclick="procesar('seac', 'fileSEAC', 'debitos')">Débitos</button></div></div>
-            <div class="card-suc"><h4>Cobro Express</h4><input type="file" id="fileCE" multiple accept=".xlsx"><div style="display:flex; gap:10px;"><button class="btn btn-p" onclick="procesar('cobroexpress', 'fileCE', 'diario')">Diario</button><button class="btn" style="background:#f59e0b; color:white" onclick="procesar('cobroexpress', 'fileCE', 'detallado')">Detalle Mes</button></div></div>
+        <div class="grid-superior">
+            <div class="card-upload">
+                <h4>🟢 SEAC</h4>
+                <div id="res-seac" class="result-box"><button class="btn-clear" onclick="limpiarRes('res-seac')">Limpiar</button><div class="res-content"></div></div>
+                <p style="color:#64748b; font-size:12px;">Ventas (Efectivo) o Débitos</p>
+                <input type="file" id="fileSEAC" multiple class="file-input">
+                <div class="btn-group">
+                    <button class="btn btn-p" onclick="procesar('seac', 'fileSEAC', 'ventas', 'res-seac')">VENTAS</button>
+                    <button class="btn btn-s" onclick="procesar('seac', 'fileSEAC', 'debitos', 'res-seac')">DÉBITOS</button>
+                </div>
+            </div>
+            <div class="card-upload">
+                <h4>🟠 Cobro Express</h4>
+                <div id="res-ce" class="result-box"><button class="btn-clear" onclick="limpiarRes('res-ce')">Limpiar</button><div class="res-content"></div></div>
+                <p style="color:#64748b; font-size:12px;">Diario o Detallado (.xlsx)</p>
+                <input type="file" id="fileCE" multiple accept=".xlsx" class="file-input">
+                <div class="btn-group">
+                    <button class="btn btn-p" onclick="procesar('cobroexpress', 'fileCE', 'diario', 'res-ce')">DIARIO</button>
+                    <button class="btn btn-ce" onclick="procesar('cobroexpress', 'fileCE', 'detallado', 'res-ce')">DETALLE</button>
+                </div>
+            </div>
+        </div>
+        <div class="grid-inferior">
+            <div class="card-upload">
+                <h4>🔵 Pago Fácil</h4>
+                <div id="res-pf" class="result-box"><button class="btn-clear" onclick="limpiarRes('res-pf')">Limpiar</button><div class="res-content"></div></div>
+                <p style="color:#64748b; font-size:12px;">Archivos de rendición (.txt)</p>
+                <input type="file" id="filePF" multiple accept=".txt" class="file-input">
+                <div class="btn-group" style="max-width: 400px;">
+                    <button class="btn btn-p" onclick="procesar('pagofacil', 'filePF', null, 'res-pf')">SUBIR ARCHIVOS .TXT</button>
+                </div>
+            </div>
         </div>
     </div>
 
     <div id="tab-config" class="tab-content">
-        <div style="display:flex; justify-content:space-between; margin-bottom:20px;"><h3>Estructura de Red</h3><button class="btn btn-p" onclick="nuevaSucursal()">+ Sucursal</button></div>
+        <div style="display:flex; justify-content:space-between; margin-bottom:20px; align-items:center;">
+            <h2 style="margin:0;">Estructura de Red Comercial</h2>
+            <button class="btn btn-p" style="flex:none; width:200px;" onclick="nuevaSucursal()">+ Nueva Sucursal</button>
+        </div>
         <div id="grid-arbol" class="grid-config"></div>
     </div>
 
     <div id="tab-informes" class="tab-content">
-        <div class="card-suc" style="display:flex; gap:10px; align-items:flex-end;">
-            <div>Desde: <input type="date" id="fDesde"></div><div>Hasta: <input type="date" id="fHasta"></div><div>Sucursal: <select id="fSuc"></select></div><button class="btn btn-p" onclick="cargarInforme()">Consultar Diario</button>
+        <div class="card-upload" style="display:flex; gap:15px; align-items:flex-end; padding:15px; margin-bottom:15px;">
+            <div>Desde: <input type="date" id="fDesde" style="padding:8px; border-radius:5px; border:1px solid #ddd;"></div>
+            <div>Hasta: <input type="date" id="fHasta" style="padding:8px; border-radius:5px; border:1px solid #ddd;"></div>
+            <div>Sucursal: <select id="fSuc" style="padding:8px; border-radius:5px; border:1px solid #ddd;"></select></div>
+            <button class="btn btn-p" onclick="cargarInforme()">CONSULTAR DIARIO</button>
         </div>
         <div id="contenedorInformes"></div>
     </div>
 
     <div id="tab-mensual" class="tab-content">
-        <div class="card-suc" style="display:flex; gap:10px; align-items:flex-end;">
-            <div>Desde: <input type="date" id="mDesde"></div><div>Hasta: <input type="date" id="mHasta"></div><button class="btn btn-p" onclick="cargarMensual()">Generar Informe Mensual</button>
+        <div class="card-upload" style="display:flex; gap:15px; align-items:flex-end; padding:15px; margin-bottom:15px;">
+            <div>Desde: <input type="date" id="mDesde" style="padding:8px; border-radius:5px; border:1px solid #ddd;"></div>
+            <div>Hasta: <input type="date" id="mHasta" style="padding:8px; border-radius:5px; border:1px solid #ddd;"></div>
+            <button class="btn btn-p" onclick="cargarMensual()">GENERAR INFORME MENSUAL</button>
         </div>
         <div id="contenedorMensual"></div>
+    </div>
+</div>
+
+<div id="modalTerm" class="modal">
+    <div class="modal-content">
+        <h3 id="modalTitle">Nueva Terminal</h3>
+        <input type="hidden" id="mEditId">
+        <input type="hidden" id="mCajaId">
+        <div style="margin-bottom:15px;">
+            <label>Empresa:</label>
+            <select id="mEmp" style="width:100%; padding:10px; margin-top:5px; border-radius:5px; border:1px solid #ddd;">
+                <option value="PAGO FÁCIL">PAGO FÁCIL</option>
+                <option value="SEAC">SEAC</option>
+                <option value="COBRO EXPRESS">COBRO EXPRESS</option>
+            </select>
+        </div>
+        <div style="margin-bottom:15px;">
+            <label>Identificador Externo (Boca/PDV):</label>
+            <input type="text" id="mId" style="width:100%; padding:10px; margin-top:5px; border-radius:5px; border:1px solid #ddd; box-sizing:border-box;">
+        </div>
+        <div class="btn-group">
+            <button class="btn btn-p" onclick="guardarTerm()">Guardar</button>
+            <button class="btn" style="background:#cbd5e1;" onclick="document.getElementById('modalTerm').style.display='none'">Cerrar</button>
+        </div>
     </div>
 </div>
 
 <script>
     let rawData = [];
     function fmt(n) { if(n === undefined || n === null || n === 0 || n === "0") return "0,00"; return new Intl.NumberFormat('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(n); }
+
+    async function procesar(ruta, inId, tipo, resId) {
+        const input = document.getElementById(inId);
+        const f = input.files; if (f.length === 0) return alert("Seleccione archivos.");
+        const pBox = document.getElementById('prog-box'), pFill = document.getElementById('bar-fill'), pTxt = document.getElementById('prog-txt');
+        const rBox = document.getElementById(resId);
+        rBox.style.display = 'none'; pBox.style.display = 'block';
+        let n=0, er=0;
+        for (let i = 0; i < f.length; i++) {
+            const perc = Math.round(((i+1)/f.length)*100);
+            pTxt.innerText = `Procesando: ${f[i].name} (${perc}%)`; pFill.style.width = perc + '%';
+            const fd = new FormData(); fd.append('archivo', f[i]); if(tipo) fd.append('tipo', tipo);
+            try { const res = await fetch(`/importar/${ruta}`, { method:'POST', body:fd }); const d = await res.json(); n += (d.nuevos || 0); er += (d.errores || 0); } catch(ex) { er++; }
+        }
+        rBox.querySelector('.res-content').innerHTML = `<b>✅ Carga Finalizada:</b> • Procesados: ${n} | • Con Error: ${er}`;
+        rBox.style.display = 'block'; input.value = ""; pBox.style.display = 'none';
+    }
+
+    function limpiarRes(id) { document.getElementById(id).style.display = 'none'; }
 
     async function cargarMensual() {
         const res = await (await fetch(`/api/informes?desde=${document.getElementById('mDesde').value}&hasta=${document.getElementById('mHasta').value}&sucursal=todas`)).json();
@@ -97,10 +205,10 @@
             dataEmp.ce.locales[r.suc_nombre][0] += parseFloat(r.ce_cant_e || 0); dataEmp.ce.locales[r.suc_nombre][1] += parseFloat(r.ce_monto_e || 0); dataEmp.ce.locales[r.suc_nombre][2] += parseFloat(r.ce_extra_e || 0); dataEmp.ce.locales[r.suc_nombre][3] += parseFloat(r.ce_cant_d || 0); dataEmp.ce.locales[r.suc_nombre][4] += parseFloat(r.ce_monto_d || 0); dataEmp.ce.locales[r.suc_nombre][5] += parseFloat(r.ce_extra_d || 0); dataEmp.ce.locales[r.suc_nombre][6] += (parseFloat(r.ce_monto_e || 0) + parseFloat(r.ce_extra_e || 0) + parseFloat(r.ce_monto_d || 0) + parseFloat(r.ce_extra_d || 0));
         });
         for (let key in dataEmp) {
-            const emp = dataEmp[key]; let html = `<div class="bloque-empresa"><div class="bloque-title ${emp.class}">${emp.title} - TOTALES POR LOCAL</div><table class="tabla-inf"><thead><tr><th>LOCAL</th><th>CANTIDAD EFECTIVO</th><th>MONTO EFECTIVO</th>${key==='ce'?'<th>EXTRA EFECTIVO</th>':''}<th>CANTIDAD DEBITO</th><th>MONTO DEBITO</th>${key==='ce'?'<th>EXTRA DEBITO</th>':''}<th>SUBTOTAL</th></tr></thead><tbody>`;
-            let finalT = Array(emp.cols).fill(0);
+            const emp = dataEmp[key]; let html = `<div class="bloque-empresa"><div class="bloque-title ${emp.class}">${emp.title} - TOTALES LOCALES</div><table class="tabla-inf"><thead><tr><th>LOCAL</th><th>CANT. EFEC</th><th>MONTO EFEC</th>${key==='ce'?'<th>EXTRA EFEC</th>':''}<th>CANT. DEB</th><th>MONTO DEB</th>${key==='ce'?'<th>EXTRA DEB</th>':''}<th>SUBTOTAL</th></tr></thead><tbody>`;
+            let finalT = Array(key==='ce'?7:5).fill(0);
             for (let loc in emp.locales) { const v = emp.locales[loc]; html += `<tr><td style="text-align:left; font-weight:bold">${loc}</td>`; v.forEach((val, i) => { html += `<td>${fmt(val)}</td>`; finalT[i] += val; }); html += `</tr>`; }
-            html += `<tr class="row-total-final"><td style="text-align:left">TOTAL GENERAL ${emp.title}</td>`; finalT.forEach((t, i) => html += `<td>${fmt(t)}</td>`);
+            html += `<tr class="row-total-final"><td style="text-align:left">TOTAL ACUMULADO ${emp.title}</td>`; finalT.forEach((t, i) => html += `<td>${fmt(t)}</td>`);
             html += `</tr></tbody></table></div>`; cont.innerHTML += html;
         }
     }
@@ -116,32 +224,11 @@
                 const v = [r.pf_cant_e, r.pf_monto_e, r.pf_cant_d, r.pf_monto_d, r.seac_cant_e, r.seac_monto_e, r.seac_cant_d, r.seac_monto_d, r.ce_cant_e, r.ce_monto_e, r.ce_extra_e, r.ce_cant_d, r.ce_monto_d, r.ce_extra_d];
                 const subT = (parseFloat(r.pf_monto_e)+parseFloat(r.pf_monto_d)) + (parseFloat(r.seac_monto_e)+parseFloat(r.seac_monto_d)) + (parseFloat(r.ce_monto_e)+parseFloat(r.ce_extra_e)+parseFloat(r.ce_monto_d)+parseFloat(r.ce_extra_d));
                 v.forEach((val, i) => st[i] += parseFloat(val || 0)); st[14] += subT;
-                html += `<tr><td>${new Date(r.fecha).toLocaleDateString()}</td><td style="text-align:left">${r.nombre_caja}</td><td class="bg-pf">${parseInt(v[0])}</td><td class="bg-pf">${fmt(v[1])}</td><td class="bg-pf">${parseInt(v[2])}</td><td class="bg-pf">${fmt(v[3])}</td><td class="bg-seac">${parseInt(v[4])}</td><td class="bg-seac">${fmt(v[5])}</td><td class="bg-seac">${parseInt(v[6])}</td><td class="bg-seac">${fmt(v[7])}</td><td class="bg-ce">${parseInt(v[8])}</td><td class="bg-ce">${fmt(v[9])}</td><td class="bg-ce">${fmt(v[10])}</td><td class="bg-ce">${parseInt(v[11])}</td><td class="bg-ce">${fmt(v[12])}</td><td class="bg-ce">${fmt(v[13])}</td><td style="font-weight:bold">${fmt(subT)}</td></tr>`;
+                html += `<tr><td>${new Date(r.fecha).toLocaleDateString()}</td><td>${r.nombre_caja}</td><td>${parseInt(v[0])}</td><td>${fmt(v[1])}</td><td>${parseInt(v[2])}</td><td>${fmt(v[3])}</td><td>${parseInt(v[4])}</td><td>${fmt(v[5])}</td><td>${parseInt(v[6])}</td><td>${fmt(v[7])}</td><td>${parseInt(v[8])}</td><td>${fmt(v[9])}</td><td>${fmt(v[10])}</td><td>${parseInt(v[11])}</td><td>${fmt(v[12])}</td><td>${fmt(v[13])}</td><td style="font-weight:bold">${fmt(subT)}</td></tr>`;
             });
-            
-            // FILA 1: TOTALES POR COLUMNA (Como estaba antes)
-            html += `<tr class="row-total-col"><td colspan="2">TOTAL COLUMNAS</td><td class="bg-pf">${parseInt(st[0])}</td><td class="bg-pf">${fmt(st[1])}</td><td class="bg-pf">${parseInt(st[2])}</td><td class="bg-pf">${fmt(st[3])}</td><td class="bg-seac">${parseInt(st[4])}</td><td class="bg-seac">${fmt(st[5])}</td><td class="bg-seac">${parseInt(st[6])}</td><td class="bg-seac">${fmt(st[7])}</td><td class="bg-ce">${parseInt(st[8])}</td><td class="bg-ce">${fmt(st[9])}</td><td class="bg-ce">${fmt(st[10])}</td><td class="bg-ce">${parseInt(st[11])}</td><td class="bg-ce">${fmt(st[12])}</td><td class="bg-ce">${fmt(st[13])}</td><td class="row-total-final">${fmt(st[14])}</td></tr>`;
-            
-            // FILA 2: RESUMEN LOCAL (Sumas unificadas)
-            const cantE = st[0]+st[4]+st[8]; const impE = st[1]+st[5]+st[9]+st[10];
-            const cantD = st[2]+st[6]+st[11]; const impD = st[3]+st[7]+st[12]+st[13];
-            html += `<tr class="row-total-suc"><td colspan="2">RESUMEN POR PAGO</td><td colspan="2" class="bg-pf" style="text-align:right">CANT. EFECTIVO: ${cantE}</td><td colspan="2" class="bg-pf" style="text-align:left">IMPORTE EF: ${fmt(impE)}</td><td colspan="2" class="bg-seac" style="text-align:right">CANT. DÉBITO: ${cantD}</td><td colspan="2" class="bg-seac" style="text-align:left">IMPORTE DEB: ${fmt(impD)}</td><td colspan="6" style="text-align:right">TOTAL LOCAL</td><td class="row-total-final">${fmt(st[14])}</td></tr>`;
-            
-            html += `</tbody></table></div>`;
+            html += `<tr class="row-total-col"><td colspan="2">TOTAL COLUMNAS</td><td>${parseInt(st[0])}</td><td>${fmt(st[1])}</td><td>${parseInt(st[2])}</td><td>${fmt(st[3])}</td><td>${parseInt(st[4])}</td><td>${fmt(st[5])}</td><td>${parseInt(st[6])}</td><td>${fmt(st[7])}</td><td>${parseInt(st[8])}</td><td>${fmt(st[9])}</td><td>${fmt(st[10])}</td><td>${parseInt(st[11])}</td><td>${fmt(st[12])}</td><td>${fmt(st[13])}</td><td class="row-total-final">${fmt(st[14])}</td></tr></tbody></table></div>`;
             cont.innerHTML += html;
         }
-    }
-
-    async function procesar(ruta, inId, tipo = null) {
-        const f = document.getElementById(inId).files; if (f.length === 0) return alert("Seleccione archivos");
-        const pBox = document.getElementById('prog-box'), pFill = document.getElementById('bar-fill'), pTxt = document.getElementById('prog-txt');
-        pBox.style.display = 'block'; let n=0, r=0, er=0;
-        for (let i = 0; i < f.length; i++) {
-            const perc = Math.round(((i+1)/f.length)*100); pTxt.innerText = `Procesando: ${f[i].name} (${perc}%)`; pFill.style.width = perc + '%';
-            const fd = new FormData(); fd.append('archivo', f[i]); if(tipo) fd.append('tipo', tipo);
-            try { const res = await fetch(`/importar/${ruta}`, { method:'POST', body:fd }); const d = await res.json(); n += (d.nuevos || 0); r += (d.repetidos || 0); er += (d.errores || 0); } catch(ex) { er++; }
-        }
-        alert(`RESULTADO: Nuevos: ${n} | Repetidos: ${r} | Errores: ${er}`); pBox.style.display = 'none';
     }
 
     async function cargarArbol() {
@@ -156,21 +243,51 @@
         });
         for (let sid in sucs) {
             const s = sucs[sid];
-            let h = `<div class="card-suc"><div class="suc-head"><strong>🏛️ ${s.nombre}</strong><div class="actions"><button class="icon-btn" onclick="editN('sucursales',${s.id},'${s.nombre}')">✏️</button><button class="icon-btn" onclick="nuevaCaja(${s.id})">➕</button><button class="icon-btn" onclick="borrar('sucursales',${s.id})">🗑️</button></div></div>`;
+            let h = `<div class="card-upload">
+                <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:2px solid #f1f5f9; padding-bottom:10px; margin-bottom:10px;">
+                    <strong style="font-size:16px;">🏛️ ${s.nombre}</strong>
+                    <div style="display:flex; gap:8px;">
+                        <button class="icon-btn btn-edit" title="Editar" onclick="editN('sucursales',${s.id},'${s.nombre}')">✏️</button>
+                        <button class="icon-btn btn-add" title="Nueva Caja" onclick="nuevaCaja(${s.id})">➕</button>
+                        <button class="icon-btn btn-del" title="Eliminar" onclick="borrar('sucursales',${s.id})">🗑️</button>
+                    </div>
+                </div>`;
             for (let cid in s.cajas) {
                 const c = s.cajas[cid];
-                h += `<div style="padding:10px; border-bottom:1px solid #f3f4f6; position:relative;"><span>📦 ${c.nombre}</span><div class="actions" style="opacity:1"><button class="icon-btn" onclick="abrirModal(${c.id})">➕</button><button class="icon-btn" onclick="editN('cajas',${c.id},'${c.nombre}')">✏️</button><button class="icon-btn" onclick="borrar('cajas',${c.id})">🗑️</button></div></div>`;
+                h += `<div style="padding:10px; border-bottom:1px solid #f3f4f6; display:flex; justify-content:space-between; align-items:center; background:#f8fafc; border-radius:8px; margin-bottom:5px;">
+                    <span>📦 <b>Caja:</b> ${c.nombre}</span>
+                    <div style="display:flex; gap:5px;">
+                        <button class="icon-btn btn-add" title="Nueva Terminal" onclick="abrirModal(${c.id})">➕</button>
+                        <button class="icon-btn btn-edit" title="Editar" onclick="editN('cajas',${c.id},'${c.nombre}')">✏️</button>
+                        <button class="icon-btn btn-del" title="Eliminar" onclick="borrar('cajas',${c.id})">🗑️</button>
+                    </div>
+                </div>`;
+                c.terminales.forEach(t => {
+                    h += `<div style="padding:5px 10px 5px 35px; font-size:12px; display:flex; justify-content:space-between; color:#64748b;">
+                        <span>💻 ${t.empresa}: <b>${t.identificador_externo}</b></span>
+                        <button class="icon-btn btn-del" style="padding:2px 4px; font-size:10px;" onclick="borrar('terminales',${t.term_id})">🗑️</button>
+                    </div>`;
+                });
             }
             h += `</div>`; grid.innerHTML += h;
         }
     }
 
-    function initApp() { const h = new Date(); const fI = new Date(h.getFullYear(), h.getMonth(), 1).toISOString().split('T')[0]; const fF = new Date(h.getFullYear(), h.getMonth() + 1, 0).toISOString().split('T')[0]; document.getElementById('fDesde').value = fI; document.getElementById('fHasta').value = fF; document.getElementById('mDesde').value = fI; document.getElementById('mHasta').value = fF; cargarArbol(); }
+    function initApp() { 
+        const h = new Date(); 
+        const fI = new Date(h.getFullYear(), h.getMonth(), 1).toISOString().split('T')[0];
+        const fF = new Date(h.getFullYear(), h.getMonth() + 1, 0).toISOString().split('T')[0];
+        document.getElementById('fDesde').value = fI; document.getElementById('fHasta').value = fF;
+        document.getElementById('mDesde').value = fI; document.getElementById('mHasta').value = fF;
+        cargarArbol(); 
+    }
     function switchTab(e, id) { document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active')); document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active')); document.getElementById(id).classList.add('active'); e.target.classList.add('active'); if(id === 'tab-config') cargarArbol(); }
-    async function editN(t,id,a) { const n = prompt("Editar:",a); if(n) { await fetch(`/api/${t}/${id}`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({nombre:n})}); cargarArbol(); } }
-    async function borrar(t,id) { if(confirm("¿Eliminar?")) { await fetch(`/api/${t}/${id}`,{method:'DELETE'}); cargarArbol(); } }
-    async function nuevaCaja(sid) { const n = prompt("Nombre caja:"); if(n) { await fetch('/api/cajas',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sucursal_id:sid, nombre:n})}); cargarArbol(); } }
-    async function nuevaSucursal() { const n = prompt("Nombre sucursal:"); if(n) { await fetch('/api/sucursales',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({nombre:n})}); cargarArbol(); } }
+    async function editN(t,id,a) { const n = prompt("Editar nombre:",a); if(n) { await fetch(`/api/${t}/${id}`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({nombre:n})}); cargarArbol(); } }
+    async function borrar(t,id) { if(confirm("¿Seguro desea eliminar?")) { await fetch(`/api/${t}/${id}`,{method:'DELETE'}); cargarArbol(); } }
+    async function nuevaCaja(sid) { const n = prompt("Nombre de la nueva caja:"); if(n) { await fetch('/api/cajas',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sucursal_id:sid, nombre:n})}); cargarArbol(); } }
+    async function nuevaSucursal() { const n = prompt("Nombre de la nueva sucursal:"); if(n) { await fetch('/api/sucursales',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({nombre:n})}); cargarArbol(); } }
+    function abrirModal(cid) { document.getElementById('mEditId').value=""; document.getElementById('mCajaId').value=cid; document.getElementById('modalTerm').style.display='flex'; }
+    async function guardarTerm() { const b = { caja_id: document.getElementById('mCajaId').value, empresa: document.getElementById('mEmp').value, identificador: document.getElementById('mId').value }; await fetch('/api/terminales', { method: 'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(b) }); document.getElementById('modalTerm').style.display='none'; cargarArbol(); }
 </script>
 </body>
 </html>
