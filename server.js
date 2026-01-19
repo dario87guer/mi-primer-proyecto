@@ -21,28 +21,45 @@ const pool = new Pool({
   port: process.env.DB_PORT,
 });
 
-// Helpers (Motor SEAC Infalible)
+// --- SISTEMA DE PROGRESO REAL ---
+let clients = [];
+function sendProgress(p, t) {
+    clients.forEach(c => c.res.write(`data: ${JSON.stringify({p, t})}\n\n`));
+}
+app.get('/api/progress', (req, res) => {
+    res.setHeader('Content-Type', 'text/event-stream');
+    res.setHeader('Cache-Control', 'no-cache');
+    res.setHeader('Connection', 'keep-alive');
+    const id = Date.now();
+    clients.push({ id, res });
+    req.on('close', () => clients = clients.filter(c => c.id !== id));
+});
+
+// --- HELPERS ESTABLES ---
 function normalizeDate(val) {
     if (!val) return null;
     let s = String(val).trim();
-    if (s.includes(' ')) s = s.split(' ')[0];
-    let parts = s.match(/(\d{1,2})[\/-](\d{1,2})[\/-](\d{4})/);
-    if (parts) return `${parts[3]}-${parts[2].padStart(2, '0')}-${parts[1].padStart(2, '0')}`;
-    if (!isNaN(val) && typeof val !== 'string') {
-        const date = new Date(Math.round((val - 25569) * 86400 * 1000));
+    if (!isNaN(val) && !s.includes('/') && !s.includes('-')) {
+        const date = new Date(Math.round((Number(val) - 25569) * 86400 * 1000));
         return date.toISOString().split('T')[0];
+    }
+    if (s.includes(' ')) s = s.split(' ')[0];
+    let parts = s.match(/^(\d{1,2})[\/-](\d{1,2})[\/-](\d{2,4})$/);
+    if (parts) {
+        let d = parts[1].padStart(2, '0'), m = parts[2].padStart(2, '0'), y = parts[3];
+        if (y.length === 2) y = "20" + y;
+        return `${y}-${m}-${d}`;
     }
     return s;
 }
 
 function getSmartVal(row, names) {
-    if (!row) return null;
     const keys = Object.keys(row);
     for (let n of names) {
         const found = keys.find(k => {
-            const cleanK = String(k).replace(/\s+/g, '').toLowerCase();
-            const cleanN = String(n).replace(/\s+/g, '').toLowerCase();
-            return cleanK === cleanN || cleanK.includes(cleanN);
+            const ck = String(k).replace(/\s+/g, '').toLowerCase();
+            const cn = String(n).replace(/\s+/g, '').toLowerCase();
+            return ck === cn || ck.includes(cn);
         });
         if (found) return row[found];
     }
@@ -58,17 +75,15 @@ function cleanImport(val) {
     return isNaN(n) ? 0 : n;
 }
 
-// --- API GESTIÓN (RESTAURADA) ---
+function cleanText(val) {
+    if (!val) return "";
+    return String(val).toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+}
+
+// --- API RED ---
 app.get('/api/arbol-configuracion', async (req, res) => {
     try {
-        const result = await pool.query(`
-            SELECT s.id as suc_id, s.nombre as suc_nombre, c.id as caja_id, c.nombre_caja,
-                   t.id as term_id, t.identificador_externo, t.empresa
-            FROM sucursales s
-            LEFT JOIN cajas c ON s.id = c.sucursal_id
-            LEFT JOIN terminales t ON c.id = t.caja_id
-            ORDER BY s.nombre, c.nombre_caja, t.identificador_externo
-        `);
+        const result = await pool.query(`SELECT s.id as suc_id, s.nombre as suc_nombre, c.id as caja_id, c.nombre_caja, t.id as term_id, t.identificador_externo, t.empresa FROM sucursales s LEFT JOIN cajas c ON s.id = c.sucursal_id LEFT JOIN terminales t ON c.id = t.caja_id ORDER BY s.nombre, c.nombre_caja, t.identificador_externo`);
         res.json(result.rows);
     } catch (err) { res.status(500).json({ error: err.message }); }
 });
@@ -101,25 +116,26 @@ app.delete('/api/:tipo/:id', async (req, res) => {
         const tabla = req.params.tipo === 'sucursales' ? 'sucursales' : (req.params.tipo === 'cajas' ? 'cajas' : 'terminales');
         await pool.query(`DELETE FROM ${tabla} WHERE id = $1`, [req.params.id]);
         res.json({ mensaje: 'Ok' });
-    } catch (e) { res.status(500).json({ error: "No se puede eliminar: tiene datos vinculados." }); }
+    } catch (e) { res.status(500).json({ error: "No se puede eliminar." }); }
 });
 
-// --- API INFORMES (RESTAURADA VERSIÓN ORIGINAL) ---
+// --- API INFORMES ---
 app.get('/api/informes', async (req, res) => {
-    const { desde, hasta, sucursal } = req.query;
+    const { desde, hasta } = req.query;
     let query = `
-        SELECT t.fecha, s.id as suc_id, s.nombre as suc_nombre, c.nombre_caja,
-            SUM(CASE WHEN t.empresa = 'PAGO FÁCIL' AND (t.medio_pago = 'EFECTIVO' OR t.medio_pago IS NULL) THEN COALESCE(t.cantidad, 1) ELSE 0 END) as pf_cant_e,
-            SUM(CASE WHEN t.empresa = 'PAGO FÁCIL' AND (t.medio_pago = 'EFECTIVO' OR t.medio_pago IS NULL) THEN t.importe ELSE 0 END) as pf_monto_e,
+        SELECT t.fecha, s.nombre as suc_nombre, c.nombre_caja,
+            SUM(CASE WHEN t.empresa = 'PAGO FÁCIL' AND t.medio_pago = 'EFECTIVO' THEN COALESCE(t.cantidad, 1) ELSE 0 END) as pf_cant_e,
+            SUM(CASE WHEN t.empresa = 'PAGO FÁCIL' AND t.medio_pago = 'EFECTIVO' THEN t.importe ELSE 0 END) as pf_monto_e,
             SUM(CASE WHEN t.empresa = 'PAGO FÁCIL' AND t.medio_pago = 'DEBITO' THEN COALESCE(t.cantidad, 1) ELSE 0 END) as pf_cant_d,
             SUM(CASE WHEN t.empresa = 'PAGO FÁCIL' AND t.medio_pago = 'DEBITO' THEN t.importe ELSE 0 END) as pf_monto_d,
-            SUM(CASE WHEN t.empresa = 'SEAC' AND (t.medio_pago = 'EFECTIVO' OR t.medio_pago IS NULL) THEN COALESCE(t.cantidad, 1) ELSE 0 END) as seac_cant_e,
-            SUM(CASE WHEN t.empresa = 'SEAC' AND (t.medio_pago = 'EFECTIVO' OR t.medio_pago IS NULL) THEN t.importe ELSE 0 END) as seac_monto_e,
+            SUM(CASE WHEN t.empresa = 'SEAC' AND t.medio_pago = 'EFECTIVO' THEN COALESCE(t.cantidad, 1) ELSE 0 END) as seac_cant_e,
+            SUM(CASE WHEN t.empresa = 'SEAC' AND t.medio_pago = 'EFECTIVO' THEN t.importe ELSE 0 END) as seac_monto_e,
             SUM(CASE WHEN t.empresa = 'SEAC' AND t.medio_pago = 'DEBITO' THEN COALESCE(t.cantidad, 1) ELSE 0 END) as seac_cant_d,
             SUM(CASE WHEN t.empresa = 'SEAC' AND t.medio_pago = 'DEBITO' THEN t.importe ELSE 0 END) as seac_monto_d,
-            SUM(CASE WHEN t.empresa = 'COBRO EXPRESS' AND (t.medio_pago = 'EFECTIVO' OR t.medio_pago IS NULL) THEN COALESCE(t.cantidad, 1) ELSE 0 END) as ce_cant_e,
-            SUM(CASE WHEN t.empresa = 'COBRO EXPRESS' AND (t.medio_pago = 'EFECTIVO' OR t.medio_pago IS NULL) THEN t.importe ELSE 0 END) as ce_monto_e,
+            SUM(CASE WHEN t.empresa = 'COBRO EXPRESS' AND t.medio_pago = 'EFECTIVO' THEN COALESCE(t.cantidad, 1) ELSE 0 END) as ce_cant_e,
+            SUM(CASE WHEN t.empresa = 'COBRO EXPRESS' AND t.medio_pago = 'EFECTIVO' THEN t.importe ELSE 0 END) as ce_monto_e,
             SUM(CASE WHEN t.empresa = 'COBRO EXPRESS' THEN t.importe_extra_efectivo ELSE 0 END) as ce_extra_e,
+            SUM(CASE WHEN t.empresa = 'COBRO EXPRESS' THEN t.devoluciones ELSE 0 END) as ce_dev,
             SUM(CASE WHEN t.empresa = 'COBRO EXPRESS' AND t.medio_pago = 'DEBITO' THEN COALESCE(t.cantidad, 1) ELSE 0 END) as ce_cant_d,
             SUM(CASE WHEN t.empresa = 'COBRO EXPRESS' AND t.medio_pago = 'DEBITO' THEN t.importe ELSE 0 END) as ce_monto_d,
             SUM(CASE WHEN t.empresa = 'COBRO EXPRESS' THEN t.importe_extra_debito ELSE 0 END) as ce_extra_d
@@ -128,69 +144,52 @@ app.get('/api/informes', async (req, res) => {
         JOIN cajas c ON term.caja_id = c.id
         JOIN sucursales s ON c.sucursal_id = s.id
         WHERE t.fecha BETWEEN $1 AND $2
+        GROUP BY t.fecha, s.nombre, c.nombre_caja ORDER BY s.nombre, t.fecha ASC
     `;
-    const p = [desde, hasta];
-    if (sucursal && sucursal !== 'todas') { p.push(sucursal); query += ` AND s.id = $3`; }
-    query += ` GROUP BY t.fecha, s.id, s.nombre, c.nombre_caja ORDER BY s.nombre, t.fecha ASC`;
-    try {
-        const result = await pool.query(query, p);
-        res.json(result.rows);
-    } catch (e) { res.status(500).json({ error: e.message }); }
+    try { const result = await pool.query(query, [desde, hasta]); res.json(result.rows); } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-// --- IMPORTADOR SEAC (SOPORTE VENTAS Y DEBITOS) ---
+// --- IMPORTADORES ---
 app.post('/importar/seac', upload.single('archivo'), async (req, res) => {
-    let n=0, e=0;
-    const tipo = req.body.tipo || 'ventas';
-    const omitidos = new Set();
-    console.log(`\n>>> SEAC PROCESANDO: ${tipo.toUpperCase()} <<<`);
+    let n=0, e=0, dup=0; const tipo = req.body.tipo || 'ventas';
+    console.log(`\n>>> SEAC RECIBIDO: ${tipo.toUpperCase()} <<<`);
     try {
         const workbook = XLSX.readFile(req.file.path, { raw: true });
         const data = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]], { raw: true });
         const consolidado = {};
-
         for (let row of data) {
-            const fRaw = getSmartVal(row, ['FechaDeposito', 'Fecha', 'F.Cobranza', 'Hora']);
-            let pdv = String(getSmartVal(row, ['PDV', 'Punto de Venta', 'Boca', 'Terminal']) || '').trim().replace(/\.0$/, '');
-            const rawImp = getSmartVal(row, ['Importe', 'Valor Facial', 'Monto', 'Total']);
-
+            const fRaw = getSmartVal(row, ['FechaDeposito', 'Fecha', 'F.Cobranza', 'Hora', 'F. Operacion', 'F.Cobro']);
+            let pdv = String(getSmartVal(row, ['PDV', 'Punto de Venta', 'Boca', 'Terminal', 'Nro. de Terminal']) || '').trim().replace(/\.0$/, '');
+            const rawImp = getSmartVal(row, ['Importe', 'Valor Facial', 'Monto', 'Total', 'Importe Neto']);
             if (pdv && fRaw && rawImp !== undefined) {
-                const imp = cleanImport(rawImp);
-                const fL = normalizeDate(fRaw);
-                if (fL && fL.length === 10) {
+                const imp = cleanImport(rawImp); const fL = normalizeDate(fRaw);
+                if (fL) {
                     const clave = `${pdv}_${fL}`;
                     if (!consolidado[clave]) consolidado[clave] = { pdv, fecha: fL, total: 0, cuenta: 0 };
-                    consolidado[clave].total += imp;
-                    consolidado[clave].cuenta += 1;
+                    consolidado[clave].total += imp; consolidado[clave].cuenta += 1;
                 }
             }
         }
-
         for (let k in consolidado) {
-            const item = consolidado[k];
-            const med = tipo === 'ventas' ? 'EFECTIVO' : 'DEBITO';
-            const idU = `SEAC_${item.pdv}_${item.fecha}_${med}`;
-            
-            const check = await pool.query(`SELECT 1 FROM terminales WHERE identificador_externo = $1`, [item.pdv]);
-            if (check.rowCount === 0) { omitidos.add(item.pdv); continue; }
-
+            const it = consolidado[k]; const med = tipo === 'ventas' ? 'EFECTIVO' : 'DEBITO';
             try {
-                if (med === 'DEBITO') {
-                    await pool.query(`UPDATE transacciones SET importe = importe - $1 WHERE empresa = 'SEAC' AND identificador_terminal = $2 AND fecha = $3 AND medio_pago = 'EFECTIVO'`, [item.total, item.pdv, item.fecha]);
-                }
-                await pool.query(`INSERT INTO transacciones (id_unico_empresa, fecha, importe, empresa, identificador_terminal, medio_pago, cantidad) VALUES ($1, $2, $3, 'SEAC', $4, $5, $6) ON CONFLICT (id_unico_empresa) DO UPDATE SET importe = EXCLUDED.importe, cantidad = EXCLUDED.cantidad`, [idU, item.fecha, item.total, item.pdv, med, item.cuenta]);
-                n++;
-                console.log(`[SEAC OK] PDV: ${item.pdv} | Total: ${item.total.toFixed(2)}`);
-            } catch (dbErr) { e++; }
+                const checkTerm = await pool.query(`SELECT 1 FROM terminales WHERE identificador_externo = $1`, [it.pdv]);
+                if (checkTerm.rowCount === 0) { console.log(`[SEAC OMITIDO] Terminal ${it.pdv} no está en la RED.`); dup++; continue; }
+                if (med === 'DEBITO') await pool.query(`UPDATE transacciones SET importe = importe - $1 WHERE empresa = 'SEAC' AND identificador_terminal = $2 AND fecha = $3 AND medio_pago = 'EFECTIVO'`, [it.total, it.pdv, it.fecha]);
+                const idU = `SEAC_${it.pdv}_${it.fecha}_${med}`;
+                const result = await pool.query(`INSERT INTO transacciones (id_unico_empresa, fecha, importe, empresa, identificador_terminal, medio_pago, cantidad) VALUES ($1, $2, $3, 'SEAC', $4, $5, $6) ON CONFLICT (id_unico_empresa) DO NOTHING`, [idU, it.fecha, it.total, it.pdv, med, it.cuenta]);
+                if (result.rowCount > 0) { n++; console.log(`[SEAC OK] PDV: ${it.pdv} | F: ${it.fecha} | $ ${it.total}`); } 
+                else { dup++; console.log(`[SEAC DUP] PDV: ${it.pdv} | F: ${it.fecha}`); }
+            } catch (dbErr) { e++; console.error(`[ERROR DB SEAC] PDV: ${it.pdv} | Detalle: ${dbErr.message}`); }
         }
-        res.json({ nuevos: n, errores: e, omitidos: omitidos.size });
-    } catch (ex) { res.status(500).json({ error: ex.message }); }
-    finally { if(req.file && fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path); }
+        res.json({ nuevos: n, errores: e, omitidos: dup });
+    } catch (ex) { console.error(`[ERR CRITICO SEAC]`, ex.message); res.status(500).json({ error: ex.message }); }
+    finally { if(req.file) fs.unlinkSync(req.file.path); }
 });
 
-// --- COBRO EXPRESS ---
 app.post('/importar/cobroexpress', upload.single('archivo'), async (req, res) => {
-    const tipo = req.body.tipo; let n = 0, r = 0, e = 0;
+    const tipo = req.body.tipo; let n = 0, e = 0, dup = 0;
+    console.log(`\n>>> COBRO EXPRESS: ${tipo.toUpperCase()} <<<`);
     try {
         const workbook = XLSX.readFile(req.file.path);
         const sn = tipo === 'detallado' ? 'DETALLADO' : workbook.SheetNames[0];
@@ -198,56 +197,88 @@ app.post('/importar/cobroexpress', upload.single('archivo'), async (req, res) =>
         let hIdx = -1;
         for(let i=0; i<data.length; i++) {
             const rS = JSON.stringify(data[i]);
-            if(rS.toLowerCase().includes("boca") && (rS.toLowerCase().includes("fecha") || rS.toLowerCase().includes("monto"))) { hIdx=i; break; }
+            if(rS.toLowerCase().includes("boca") || rS.toLowerCase().includes("monto")) { hIdx=i; break; }
         }
         const headers = data[hIdx];
         const rows = data.slice(hIdx + 1);
-        for (let rArr of rows) {
-            const row = {}; headers.forEach((h, i) => row[String(h).trim()] = rArr[i]);
-            try {
-                if (tipo === 'diario') {
-                    const pdv = String(getSmartVal(row, ['Boca', 'BOCA']) || '').trim().replace(/\.0$/, '');
-                    const fN = normalizeDate(getSmartVal(row, ['Fecha', 'FECHA']));
-                    if(!pdv || !fN || pdv === "TOTAL GENERAL") continue;
-                    const tot = cleanImport(getSmartVal(row,['Total Boletas'])), dev = Math.abs(cleanImport(getSmartVal(row,['Devoluciones']))), deb = Math.abs(cleanImport(getSmartVal(row,['Debitos'])));
-                    await pool.query(`INSERT INTO transacciones (id_unico_empresa, fecha, importe, importe_extra_efectivo, empresa, identificador_terminal, medio_pago, cantidad) VALUES ($1,$2,$3,$4,'COBRO EXPRESS',$5,'EFECTIVO', $6) ON CONFLICT (id_unico_empresa) DO UPDATE SET importe=EXCLUDED.importe, cantidad=EXCLUDED.cantidad`, [`CE_DIA_${pdv}_${fN}`,fN,tot-dev-deb,parseFloat(getSmartVal(row,['Extra'])||0),pdv, parseInt(getSmartVal(row,['Cant Boletas'])||1)]);
-                    await pool.query(`INSERT INTO transacciones (id_unico_empresa, fecha, importe, importe_extra_debito, empresa, identificador_terminal, medio_pago, cantidad) VALUES ($1,$2,$3,$4,'COBRO EXPRESS',$5,'DEBITO', 0) ON CONFLICT (id_unico_empresa) DO UPDATE SET importe=EXCLUDED.importe`, [`CE_DIA_DEB_${pdv}_${fN}`,fN,deb,parseFloat(getSmartVal(row,['Extra Debitos'])||0),pdv]);
-                    n++;
-                } else {
-                    const idT = String(getSmartVal(row, ['ID_TRANSACCION']) || ""), pdv = String(getSmartVal(row, ['BOCA']) || "").trim().replace(/\.0$/, '');
-                    if(!idT || !pdv) continue;
-                    const fN = normalizeDate(getSmartVal(row, ['FECHA_COBRO']));
-                    const res = await pool.query(`INSERT INTO transacciones (id_unico_empresa, id_transaccion_externo, fecha, importe, empresa, identificador_terminal, medio_pago, cantidad) VALUES ($1,$2,$3,$4,'COBRO EXPRESS',$5, $6, 1) ON CONFLICT (id_transaccion_externo) DO NOTHING`, [`CE_DET_${idT}`,idT,fN,cleanImport(getSmartVal(row,['Monto'])),pdv, String(getSmartVal(row,['COD MONEDA'])||"").includes('DEBITO')?'DEBITO':'EFECTIVO']);
-                    if (res.rowCount > 0) n++; else r++;
+        if (tipo === 'detallado') {
+            const resumen = {};
+            for (let i = 0; i < rows.length; i++) {
+                const row = {}; headers.forEach((h, idx) => row[String(h).trim()] = rows[i][idx]);
+                const pdv = String(getSmartVal(row, ['BOCA']) || "").trim().replace(/\.0$/, '');
+                const fN = normalizeDate(getSmartVal(row, ['FECHA_COBRO']));
+                const imp = cleanImport(getSmartVal(row, ['Monto']));
+                const med = cleanText(getSmartVal(row,['COD MONEDA'])).includes('DEBITO') ? 'DEBITO' : 'EFECTIVO';
+                if (pdv && fN) {
+                    const clave = `${pdv}_${fN}_${med}`;
+                    if (!resumen[clave]) resumen[clave] = { pdv, fecha: fN, medio: med, total: 0, cant: 0 };
+                    resumen[clave].total += imp; resumen[clave].cant++;
                 }
-            } catch (err) { e++; }
-        }
-        res.json({ nuevos: n, repetidos: r, errores: e });
-    } catch (ex) { res.status(500).json({ error: ex.message }); }
-    finally { if(req.file && fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path); }
-});
-
-// --- PAGO FÁCIL ---
-app.post('/importar/pagofacil', upload.single('archivo'), async (req, res) => {
-    let n=0, r=0, e=0;
-    try {
-        const content = fs.readFileSync(req.file.path, 'utf8');
-        const lines = content.split('\n');
-        for (let l of lines) {
-            const t = l.match(/A\d{5}/), f = l.match(/\d{2}\/\d{2}\/\d{2}/), m = l.match(/[\d.]+\,\d{2}/);
-            if (t && f && m) {
+                if (i % 500 === 0) sendProgress(Math.round((i/rows.length)*100), `Analizando Detallado...`);
+            }
+            for (let k in resumen) {
+                const it = resumen[k];
                 try {
-                    const med = l.includes(' D ') ? 'DEBITO' : 'EFECTIVO';
-                    const imp = cleanImport(m[0]);
-                    const matchCant = l.match(/,\d{2}\s+(D\s+)?(\d+,\d{2})\s+AMB/);
-                    await pool.query(`INSERT INTO transacciones (id_unico_empresa, fecha, importe, empresa, identificador_terminal, medio_pago, cantidad) VALUES ($1, TO_DATE($2, 'DD/MM/YY'), $3, 'PAGO FÁCIL', $4, $5, $6) ON CONFLICT (id_unico_empresa) DO UPDATE SET importe=EXCLUDED.importe, cantidad=EXCLUDED.cantidad`, [`PF_${t[0]}_${f[0].replace(/\//g,'')}_${imp}_${med}`, f[0], imp, t[0], med, matchCant ? parseInt(matchCant[2].split(',')[0]) : 1]);
-                    n++;
-                } catch (ex) { e++; }
+                    const checkTerm = await pool.query(`SELECT 1 FROM terminales WHERE identificador_externo = $1`, [it.pdv]);
+                    if (checkTerm.rowCount === 0) { dup++; continue; }
+                    const idU = `CE_DET_${it.pdv}_${it.fecha}_${it.medio}`;
+                    const result = await pool.query(`INSERT INTO transacciones (id_unico_empresa, fecha, importe, empresa, identificador_terminal, medio_pago, cantidad) VALUES ($1,$2,$3,'COBRO EXPRESS',$4,$5,$6) ON CONFLICT (id_unico_empresa) DO NOTHING`, [idU, it.fecha, it.total, it.pdv, it.medio, it.cant]);
+                    if (result.rowCount > 0) { n++; console.log(`[CE DET OK] PDV: ${it.pdv} | $ ${it.total}`); }
+                    else { dup++; }
+                } catch (dbE) { e++; }
+            }
+        } else {
+            for (let i = 0; i < rows.length; i++) {
+                const row = {}; headers.forEach((h, idx) => row[String(h).trim()] = rows[i][idx]);
+                const pdv = String(getSmartVal(row, ['Boca', 'BOCA']) || '').trim().replace(/\.0$/, '');
+                const fN = normalizeDate(getSmartVal(row, ['Fecha', 'FECHA']));
+                if(!pdv || !fN || pdv === "TOTAL GENERAL") continue;
+                const dev = Math.abs(cleanImport(getSmartVal(row,['Devoluciones'])));
+                const extE = cleanImport(getSmartVal(row,['Extra']));
+                const extD = cleanImport(getSmartVal(row,['Extra Debitos']));
+                try {
+                    await pool.query(`INSERT INTO transacciones (id_unico_empresa, fecha, importe, empresa, identificador_terminal, medio_pago, cantidad, devoluciones, importe_extra_efectivo) VALUES ($1,$2,0,'COBRO EXPRESS',$3,'EFECTIVO',0,$4,$5) ON CONFLICT (id_unico_empresa) DO UPDATE SET devoluciones=EXCLUDED.devoluciones, importe_extra_efectivo=EXCLUDED.importe_extra_efectivo`, [`CE_DET_${pdv}_${fN}_EFECTIVO`, fN, pdv, dev, extE]);
+                    await pool.query(`INSERT INTO transacciones (id_unico_empresa, fecha, importe, empresa, identificador_terminal, medio_pago, cantidad, importe_extra_debito) VALUES ($1,$2,0,'COBRO EXPRESS',$3,'DEBITO',0,$4) ON CONFLICT (id_unico_empresa) DO UPDATE SET importe_extra_debito=EXCLUDED.importe_extra_debito`, [`CE_DET_${pdv}_${fN}_DEBITO`, fN, pdv, extD]);
+                    n++; console.log(`[CE DIA OK] PDV: ${pdv} | Dev: ${dev}`);
+                } catch(dbE) { e++; }
             }
         }
-        res.json({ nuevos: n, repetidos: r, errores: e });
-    } catch (ex) { res.status(500).json({ error: ex.message }); }
-    finally { if(req.file && fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path); }
+        res.json({ nuevos: n, errores: e, omitidos: dup });
+    } catch (ex) { console.error(`[ERR CE]`, ex.message); res.status(500).json({ error: ex.message }); }
+    finally { if(req.file) fs.unlinkSync(req.file.path); }
 });
 
-app.listen(3000, () => console.log('🚀 Sistema Dario v4.53 - Restauración Visual Completa'));
+app.post('/importar/pagofacil', upload.single('archivo'), async (req, res) => {
+    let n=0, e=0, dup=0;
+    console.log(`\n>>> PAGO FÁCIL RECIBIDO <<<`);
+    try {
+        const fullContent = fs.readFileSync(req.file.path, 'utf8');
+        const lines = fullContent.split(/\r?\n/);
+        for (let i = 0; i < lines.length; i++) {
+            const l = lines[i];
+            const pdvMatch = l.match(/A\d{5}/), dateMatch = l.match(/\d{2}\/\d{2}\/\d{2}/), importMatch = l.match(/[\d.]+\,\d{2}/);
+            if (pdvMatch && dateMatch && importMatch) {
+                try {
+                    const pdv = pdvMatch[0];
+                    const checkTerm = await pool.query(`SELECT 1 FROM terminales WHERE identificador_externo = $1`, [pdv]);
+                    if (checkTerm.rowCount === 0) { dup++; continue; }
+                    const med = l.includes(' D ') ? 'DEBITO' : 'EFECTIVO';
+                    const imp = cleanImport(importMatch[0]);
+                    const fL = dateMatch[0];
+                    let cantDetectada = 1;
+                    const combinedText = l + (lines[i+1] || "");
+                    const cantMatch = combinedText.match(/(\d+[,.]?\d*)\s+(AMB|SUP)/i);
+                    if (cantMatch && cantMatch[1]) cantDetectada = parseInt(cantMatch[1].replace(',', '.'));
+                    const idU = `PF_${pdv}_${fL.replace(/\//g,'')}_${imp}_${med}`;
+                    const result = await pool.query(`INSERT INTO transacciones (id_unico_empresa, fecha, importe, empresa, identificador_terminal, medio_pago, cantidad) VALUES ($1, TO_DATE($2, 'DD/MM/YY'), $3, 'PAGO FÁCIL', $4, $5, $6) ON CONFLICT (id_unico_empresa) DO NOTHING`, [idU, fL, imp, pdv, med, cantDetectada]);
+                    if (result.rowCount > 0) { n++; console.log(`[PF OK] T: ${pdv} | $ ${imp} | Cant: ${cantDetectada}`); }
+                    else { dup++; }
+                } catch (dbE) { e++; }
+            }
+        }
+        res.json({ nuevos: n, errores: e, omitidos: dup });
+    } catch (ex) { console.error(`[ERR PF]`, ex.message); res.status(500).json({ error: ex.message }); }
+    finally { if(req.file) fs.unlinkSync(req.file.path); }
+});
+
+app.listen(3000, () => console.log('🚀 Sistema Dario v5.00 - Informe Mensual Restaurado'));
