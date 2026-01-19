@@ -280,5 +280,5 @@ app.post('/importar/pagofacil', upload.single('archivo'), async (req, res) => {
     } catch (ex) { console.error(`[ERR PF]`, ex.message); res.status(500).json({ error: ex.message }); }
     finally { if(req.file) fs.unlinkSync(req.file.path); }
 });
-
-app.listen(3000, () => console.log('🚀 Sistema Dario v5.00 - Informe Mensual Restaurado'));
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => console.log(`🚀 Sistema Dario v5.00 - Corriendo en puerto ${PORT}`));
