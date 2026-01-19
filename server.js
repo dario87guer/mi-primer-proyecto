@@ -149,7 +149,7 @@ app.get('/api/informes', async (req, res) => {
     try { const result = await pool.query(query, [desde, hasta]); res.json(result.rows); } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-// --- IMPORTADORES ---
+// --- IMPORTADORES BLINDADOS ---
 app.post('/importar/seac', upload.single('archivo'), async (req, res) => {
     let n=0, e=0, dup=0; const tipo = req.body.tipo || 'ventas';
     console.log(`\n>>> SEAC RECIBIDO: ${tipo.toUpperCase()} <<<`);
@@ -280,5 +280,6 @@ app.post('/importar/pagofacil', upload.single('archivo'), async (req, res) => {
     } catch (ex) { console.error(`[ERR PF]`, ex.message); res.status(500).json({ error: ex.message }); }
     finally { if(req.file) fs.unlinkSync(req.file.path); }
 });
+
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`🚀 Sistema Dario v5.00 - Corriendo en puerto ${PORT}`));
+app.listen(PORT, () => console.log(`🚀 Sistema Dario v5.01 - Corriendo en puerto ${PORT}`));

@@ -27,27 +27,18 @@
         .tabla-inf th { background: #f8fafc; color: #475569; padding: 10px 5px; border: 1px solid #e2e8f0; font-size: 12px; line-height: 1.3; vertical-align: middle; white-space: normal; font-weight: 500; }
         .tabla-inf td { padding: 8px 4px; border: 1px solid #f1f5f9; text-align: center; font-size: 12px; }
         
-        .th-principal { 
-            font-weight: 900 !important; font-size: 14px !important; 
-            border: 2px solid #334155 !important; color: #1e293b !important;
-            background: #e2e8f0 !important; text-transform: uppercase;
-        }
-        
+        .th-principal { font-weight: 900 !important; font-size: 14px !important; border: 2px solid #334155 !important; color: #1e293b !important; background: #e2e8f0 !important; text-transform: uppercase; }
         .border-left-group { border-left: 3px solid #64748b !important; }
         .border-right-group { border-right: 3px solid #64748b !important; }
-
         .row-total-final { background: #1e293b !important; color: white !important; font-weight: bold !important; }
         .row-grand-total { background: #4f46e5 !important; color: white !important; font-weight: 900 !important; }
         
         .controls-row { display: flex; gap: 15px; align-items: center; flex-wrap: wrap; }
         .control-item { display: flex; flex-direction: column; gap: 4px; font-weight: 600; color: #475569; font-size: 14px; }
-        input[type="date"], select { 
-            padding: 8px 12px; border-radius: 8px; border: 1px solid #cbd5e1; height: 42px; 
-            font-family: inherit; font-size: 14px; box-sizing: border-box;
-        }
+        input[type="date"], select { padding: 8px 12px; border-radius: 8px; border: 1px solid #cbd5e1; height: 42px; font-family: inherit; font-size: 14px; box-sizing: border-box; }
 
-        .modal { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); align-items:center; justify-content:center; }
-        .modal-content { background:white; padding:25px; border-radius:15px; width:400px; }
+        .modal { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); align-items:center; justify-content:center; z-index: 2000; }
+        .modal-content { background:white; padding:25px; border-radius:15px; width:400px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); }
         .tab-content { display: none; } .tab-content.active { display: block; }
         .grid-config { display: grid; grid-template-columns: repeat(auto-fill, minmax(350px, 1fr)); gap: 20px; }
         .icon-btn { background: #f1f5f9; border: none; cursor: pointer; padding: 6px; border-radius: 6px; }
@@ -126,6 +117,12 @@
     </div>
 </div>
 
+<div id="modalTerm" class="modal"><div class="modal-content"><h3>Nueva Terminal</h3><input type="hidden" id="mCajaId">
+    <div style="margin-bottom:15px;"><label style="font-weight:bold; display:block; margin-bottom:5px;">Empresa:</label><select id="mEmp" style="width:100%;"><option value="PAGO FÁCIL">PAGO FÁCIL</option><option value="SEAC">SEAC</option><option value="COBRO EXPRESS">COBRO EXPRESS</option></select></div>
+    <div style="margin-bottom:15px;"><label style="font-weight:bold; display:block; margin-bottom:5px;">ID / PDV:</label><input type="text" id="mId" style="width:100%; padding:8px; box-sizing:border-box; border:1px solid #ccc; border-radius:6px;"></div>
+    <div class="btn-group"><button class="btn btn-p" onclick="guardarTerm()">Guardar</button><button class="btn" style="background:#ddd" onclick="document.getElementById('modalTerm').style.display='none'">Cerrar</button></div>
+</div></div>
+
 <script>
     function fmt(n) { 
         if (n === null || n === undefined || isNaN(n)) return "0,00";
@@ -149,26 +146,23 @@
             const fd = new FormData(); fd.append('archivo', f); if(tipo) fd.append('tipo', tipo);
             try { 
                 const res = await fetch(`/importar/${ruta}`, { method:'POST', body:fd }); 
-                const d = await res.json(); 
-                totN += (d.nuevos || 0); totE += (d.errores || 0); totD += (d.omitidos || 0);
+                const d = await res.json(); totN += (d.nuevos || 0); totE += (d.errores || 0); totD += (d.omitidos || 0);
             } catch(ex) { console.error(ex); totE++; }
         }
         const rBox = document.getElementById(resId);
         rBox.style.display = 'block';
         rBox.querySelector('.res-content').innerHTML = `<b>📊 Resumen de Carga:</b><br>✅ Nuevos: ${totN} | ⚠️ Duplicados / Omitidos: ${totD} | ❌ Errores: ${totE}`;
-        input.value = ""; 
-        document.getElementById('prog-box').style.display = 'none';
+        input.value = ""; document.getElementById('prog-box').style.display = 'none';
     }
+
+    function limpiarRes(id) { document.getElementById(id).style.display = 'none'; }
 
     function exportarTabla(idContenedor, nombreBase) {
         const cont = document.getElementById(idContenedor);
         if (!cont.innerHTML.trim()) return alert("No hay datos para exportar.");
         const wb = XLSX.utils.book_new();
         const tablas = cont.querySelectorAll('table');
-        tablas.forEach((t, i) => {
-            const ws = XLSX.utils.table_to_sheet(t);
-            XLSX.utils.book_append_sheet(wb, ws, `Hoja_${i+1}`);
-        });
+        tablas.forEach((t, i) => { const ws = XLSX.utils.table_to_sheet(t); XLSX.utils.book_append_sheet(wb, ws, `Hoja_${i+1}`); });
         XLSX.writeFile(wb, `${nombreBase}_${new Date().toLocaleDateString()}.xlsx`);
     }
 
@@ -180,26 +174,19 @@
             "pf": { title: "PAGO FÁCIL", class: "title-pf", locales: {}, cols: 5 }, 
             "ce": { title: "COBRO EXPRESS", class: "title-ce", locales: {}, cols: 10 } 
         };
-        
         res.forEach(r => {
             if(!dataEmp.seac.locales[r.suc_nombre]) dataEmp.seac.locales[r.suc_nombre] = Array(5).fill(0);
             if(!dataEmp.pf.locales[r.suc_nombre]) dataEmp.pf.locales[r.suc_nombre] = Array(5).fill(0);
             if(!dataEmp.ce.locales[r.suc_nombre]) dataEmp.ce.locales[r.suc_nombre] = Array(10).fill(0);
-
             dataEmp.seac.locales[r.suc_nombre][0]+=parseFloat(r.seac_cant_e||0); dataEmp.seac.locales[r.suc_nombre][1]+=parseFloat(r.seac_monto_e||0); dataEmp.seac.locales[r.suc_nombre][2]+=parseFloat(r.seac_cant_d||0); dataEmp.seac.locales[r.suc_nombre][3]+=parseFloat(r.seac_monto_d||0); dataEmp.seac.locales[r.suc_nombre][4]+=(parseFloat(r.seac_monto_e||0)+parseFloat(r.seac_monto_d||0));
             dataEmp.pf.locales[r.suc_nombre][0]+=parseFloat(r.pf_cant_e||0); dataEmp.pf.locales[r.suc_nombre][1]+=parseFloat(r.pf_monto_e||0); dataEmp.pf.locales[r.suc_nombre][2]+=parseFloat(r.pf_cant_d||0); dataEmp.pf.locales[r.suc_nombre][3]+=parseFloat(r.pf_monto_d||0); dataEmp.pf.locales[r.suc_nombre][4]+=(parseFloat(r.pf_monto_e||0)+parseFloat(r.pf_monto_d||0));
-            
             const mEf = parseFloat(r.ce_monto_e||0), mDe = parseFloat(r.ce_monto_d||0), dev = parseFloat(r.ce_dev||0), exEf = parseFloat(r.ce_extra_e||0), exDe = parseFloat(r.ce_extra_d||0);
             const subCE = (mEf + mDe - exEf - exDe - dev);
-            const cantTotCE = parseFloat(r.ce_cant_e||0) + parseFloat(r.ce_cant_d||0);
-            const efMenosDev = mEf - dev;
-
-            dataEmp.ce.locales[r.suc_nombre][0]+=parseFloat(r.ce_cant_e||0); dataEmp.ce.locales[r.suc_nombre][1]+=mEf; dataEmp.ce.locales[r.suc_nombre][2]+=dev; dataEmp.ce.locales[r.suc_nombre][3]+=efMenosDev; dataEmp.ce.locales[r.suc_nombre][4]+=exEf; dataEmp.ce.locales[r.suc_nombre][5]+=parseFloat(r.ce_cant_d||0); dataEmp.ce.locales[r.suc_nombre][6]+=mDe; dataEmp.ce.locales[r.suc_nombre][7]+=exDe; dataEmp.ce.locales[r.suc_nombre][8]+=cantTotCE; dataEmp.ce.locales[r.suc_nombre][9]+=subCE;
+            dataEmp.ce.locales[r.suc_nombre][0]+=parseFloat(r.ce_cant_e||0); dataEmp.ce.locales[r.suc_nombre][1]+=mEf; dataEmp.ce.locales[r.suc_nombre][2]+=dev; dataEmp.ce.locales[r.suc_nombre][3]+=(mEf-dev); dataEmp.ce.locales[r.suc_nombre][4]+=exEf; dataEmp.ce.locales[r.suc_nombre][5]+=parseFloat(r.ce_cant_d||0); dataEmp.ce.locales[r.suc_nombre][6]+=mDe; dataEmp.ce.locales[r.suc_nombre][7]+=exDe; dataEmp.ce.locales[r.suc_nombre][8]+=(parseFloat(r.ce_cant_e||0)+parseFloat(r.ce_cant_d||0)); dataEmp.ce.locales[r.suc_nombre][9]+=subCE;
         });
-
         for (let key in dataEmp) {
             const emp = dataEmp[key];
-            let html = `<div class="bloque-empresa"><div class="bloque-title ${emp.class}">${emp.title} - TOTALES ACUMULADOS</div><table class="tabla-inf"><thead><tr><th>NOMBRE LOCAL</th><th class="border-left-group">CANTIDAD<br>EFECTIVO</th><th>MONTO<br>EFECTIVO</th>${key==='ce'?'<th>DEVOLUCIONES<br>RESUMIDO</th><th>EFECTIVO MENOS<br>DEVOLUCIONES</th><th>EXTRA SERVICIO<br>EFECTIVO</th>':''}<th>CANTIDAD<br>DÉBITO</th><th>MONTO<br>DÉBITO</th>${key==='ce'?'<th>EXTRA SERVICIO<br>DÉBITO</th><th>CANTIDAD<br>TOTAL</th>':''}<th class="border-right-group">SUBTOTAL<br>FINAL</th></tr></thead><tbody>`;
+            let html = `<div class="bloque-empresa"><div class="bloque-title ${emp.class}">${emp.title} - TOTALES ACUMULADOS</div><table class="tabla-inf"><thead><tr><th>NOMBRE LOCAL</th><th class="th-principal border-left-group">CANTIDAD<br>EFECTIVO</th><th>MONTO<br>EFECTIVO</th>${key==='ce'?'<th>DEVOLUCIONES<br>RESUMIDO</th><th>EFECTIVO MENOS<br>DEVOLUCIONES</th><th>EXTRA SERVICIO<br>EFECTIVO</th>':''}<th>CANTIDAD<br>DÉBITO</th><th>MONTO<br>DÉBITO</th>${key==='ce'?'<th>EXTRA SERVICIO<br>DÉBITO</th><th>CANTIDAD<br>TOTAL</th>':''}<th class="border-right-group">SUBTOTAL<br>FINAL</th></tr></thead><tbody>`;
             let finalT = Array(emp.cols).fill(0);
             for (let loc in emp.locales) { 
                 html += `<tr><td style="text-align:left; font-weight:bold">${loc}</td>`; 
@@ -212,7 +199,7 @@
             html += `<tr class="row-total-final"><td style="text-align:left">TOTAL COLUMNAS</td>`; 
             finalT.forEach((t, i) => { const isCant = (key==='seac' || key==='pf') ? (i===0 || i===2) : (i===0 || i===5 || i===8); const groupClass = (i === 0) ? 'border-left-group' : (i === emp.cols - 1) ? 'border-right-group' : ''; html += `<td class="${groupClass}">${isCant ? parseInt(t) : fmt(t)}</td>`; }); html += `</tr>`;
             let gC = (key==='ce') ? finalT[8] : (finalT[0]+finalT[2]), gM = (key==='ce') ? finalT[9] : finalT[4];
-            html += `<tr class="row-grand-total"><td style="text-align:left">GRAN TOTAL RED ${emp.title}</td><td colspan="${key==='ce'?7:3}" style="text-align:right">CANTIDAD TOTAL OPERACIONES: ${parseInt(gC)}</td><td colspan="2" style="text-align:right">IMPORTE TOTAL RECAUDADO: $ ${fmt(gM)}</td></tr></tbody></table></div>`;
+            html += `<tr class="row-grand-total"><td style="text-align:left">GRAN TOTAL RED ${emp.title}</td><td colspan="${key==='ce'?7:3}" style="text-align:right">CANTIDAD TOTAL: ${parseInt(gC)}</td><td colspan="2" style="text-align:right">IMPORTE TOTAL RECAUDADO: $ ${fmt(gM)}</td></tr></tbody></table></div>`;
             cont.innerHTML += html;
         }
     }
@@ -245,8 +232,7 @@
         data.forEach(r => {
             if (!sucs[r.suc_id]) { 
                 sucs[r.suc_id] = { id: r.suc_id, nombre: r.suc_nombre, cajas: {} };
-                const opt = `<option value="${r.suc_nombre}">${r.suc_nombre}</option>`;
-                selD.innerHTML += opt;
+                selD.innerHTML += `<option value="${r.suc_nombre}">${r.suc_nombre}</option>`;
             }
             if (r.caja_id && !sucs[r.suc_id].cajas[r.caja_id]) sucs[r.suc_id].cajas[r.caja_id] = { id: r.caja_id, nombre: r.nombre_caja, terminales: [] };
             if (r.term_id) sucs[r.suc_id].cajas[r.caja_id].terminales.push(r);
@@ -273,10 +259,17 @@
     function switchTab(e, id) { document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active')); document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active')); document.getElementById(id).classList.add('active'); e.target.classList.add('active'); if(id === 'tab-config') cargarArbol(); }
     async function editN(t,id,a) { const n = prompt("Editar nombre:",a); if(n) { await fetch(`/api/${t}/${id}`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({nombre:n})}); cargarArbol(); } }
     async function borrar(t,id) { if(confirm("¿Eliminar?")) { await fetch(`/api/${t}/${id}`,{method:'DELETE'}); cargarArbol(); } }
-    async function nuevaCaja(sid) { const n = prompt("Nombre de la nueva caja:"); if(n) { await fetch('/api/cajas',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sucursal_id:sid, nombre:n})}); cargarArbol(); } }
-    async function nuevaSucursal() { const n = prompt("Nombre de la nueva sucursal:"); if(n) { await fetch('/api/sucursales',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({nombre:n})}); cargarArbol(); } }
-    function abrirModal(cid) { document.getElementById('mCajaId').value=cid; document.getElementById('modalTerm').style.display='flex'; }
-    async function guardarTerm() { const b = { caja_id: document.getElementById('mCajaId').value, empresa: document.getElementById('mEmp').value, identificador: document.getElementById('mId').value }; await fetch('/api/terminales', { method: 'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(b) }); document.getElementById('modalTerm').style.display='none'; cargarArbol(); }
+    async function nuevaCaja(sid) { const n = prompt("Nombre caja:"); if(n) { await fetch('/api/cajas',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sucursal_id:sid, nombre:n})}); cargarArbol(); } }
+    async function nuevaSucursal() { const n = prompt("Nombre sucursal:"); if(n) { await fetch('/api/sucursales',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({nombre:n})}); cargarArbol(); } }
+    
+    // FUNCIONES MODAL TERMINAL RESTAURADAS
+    function abrirModal(cid) { document.getElementById('mCajaId').value = cid; document.getElementById('modalTerm').style.display = 'flex'; }
+    async function guardarTerm() { 
+        const b = { caja_id: document.getElementById('mCajaId').value, empresa: document.getElementById('mEmp').value, identificador: document.getElementById('mId').value }; 
+        if(!b.identificador) return alert("Ingrese ID");
+        await fetch('/api/terminales', { method: 'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(b) }); 
+        document.getElementById('modalTerm').style.display = 'none'; document.getElementById('mId').value=""; cargarArbol(); 
+    }
 </script>
 </body>
 </html>
