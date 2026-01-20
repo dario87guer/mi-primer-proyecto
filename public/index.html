@@ -5,305 +5,962 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Control Transacciones Impuestos</title>
     <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
     <style>
-        :root { --p: #4f46e5; --s: #10b981; --nav: #1e293b; --bg: #f3f4f6; }
-        body { font-family: 'Segoe UI', sans-serif; background: var(--bg); margin: 0; font-size: 14px; overflow-x: auto; }
-        
-        .navbar { background: var(--nav); display: flex; padding: 0 10px; position: sticky; top: 0; z-index: 1000; overflow-x: auto; border-bottom: 2px solid var(--p); }
-        .nav-link { color: #94a3b8; padding: 15px 15px; cursor: pointer; border-bottom: 3px solid transparent; font-weight: 600; white-space: nowrap; }
-        .nav-link.active { color: white; border-bottom-color: var(--p); }
-        
-        .container { min-width: 360px; max-width: 100%; margin: 10px auto; padding: 0 10px; box-sizing: border-box; }
-        
-        /* OCULTAR SECCIONES CORRECTAMENTE */
-        .tab-content { display: none; }
-        .tab-content.active { display: block; }
-
-        .card-upload { background: white; border-radius: 12px; border: 1px solid #e5e7eb; padding: 15px; margin-bottom: 10px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
-        .card-upload h4 { margin: 0 0 10px 0; font-size: 18px; border-bottom: 1px solid #f1f5f9; padding-bottom: 5px; }
-        
-        .file-input { width: 100%; padding: 10px; border: 2px dashed #cbd5e1; border-radius: 8px; margin: 10px 0; background: #f8fafc; box-sizing: border-box; }
-        
-        .btn-group { display: flex; gap: 8px; flex-wrap: wrap; }
-        .btn { padding: 12px 15px; border-radius: 8px; border: none; cursor: pointer; font-weight: 700; font-size: 14px; transition: 0.2s; min-height: 44px; flex: 1; min-width: 120px; display: inline-flex; align-items: center; justify-content: center; }
-        .btn-p { background: var(--p); color: white; } .btn-s { background: var(--s); color: white; }
-        
-        /* ESTÉTICA DE TABLAS RESTAURADA */
-        .bloque-empresa { background: white; border-radius: 12px; border: 1px solid #cbd5e1; margin-bottom: 20px; overflow-x: auto; -webkit-overflow-scrolling: touch; }
-        .tabla-inf { width: 100%; border-collapse: collapse; min-width: 1100px; }
-        .tabla-inf th, .tabla-inf td { padding: 8px 4px; border: 1px solid #f1f5f9; text-align: center; font-size: 12px; }
-        
-        .th-principal { font-weight: 900 !important; font-size: 14px !important; border: 2px solid #334155 !important; background: #e2e8f0 !important; text-transform: uppercase; color: #1e293b; }
-        .border-left-group { border-left: 3px solid #64748b !important; }
-        .border-right-group { border-right: 3px solid #64748b !important; }
-
-        /* CONTROLES ALINEADOS */
-        .controls-row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; justify-content: center; background: #fff; padding: 15px; border-radius: 12px; margin-bottom: 15px; border: 1px solid #e5e7eb; }
-        .control-item { display: flex; flex-direction: column; gap: 2px; font-weight: 600; font-size: 13px; color: #475569; }
-        input[type="date"], select, input[type="number"], input[type="text"] { padding: 8px 12px; border-radius: 8px; border: 1px solid #cbd5e1; height: 42px; font-size: 14px; font-family: inherit; }
-
-        .modal { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.6); align-items:center; justify-content:center; z-index: 2000; padding: 10px; box-sizing: border-box; }
-        .modal-content { background:white; padding:25px; border-radius:15px; width:100%; max-width: 450px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); }
-
-        .grid-config { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 15px; }
-        .icon-btn { background: #f1f5f9; border: none; cursor: pointer; padding: 8px; border-radius: 6px; font-size: 16px; transition: 0.2s; }
-        .icon-btn:hover { background: #e2e8f0; }
-
-        @media (max-width: 600px) {
-            .nav-link { padding: 12px 10px; font-size: 13px; }
-            .controls-row { flex-direction: column; align-items: stretch; }
-            .btn { width: 100%; }
+        :root {
+            --primary: #6366f1;
+            --primary-dark: #3730a3;
+            --secondary: #10b981;
+            --danger: #f87171;
+            --nav-bg: #10172a;
+            --nav-txt: #e0e7ef;
+            --bg: #f8fafc;
+            --white: #fff;
+            --shadow: 0 8px 24px 0 rgba(31,41,55,.08);
+            --radius-lg: 13px;
+            --radius-md: 8px;
+            --radius-mini: 4.5px;
+            --text-title: #10172a;
+            --text-body: #334155;
+            --input-bg: #f3f4f6;
+            --input-border: #cbd5e1;
+            --menu-min: 48px;
+            --menu-max: 200px;
+            --menu-break: 700px;
+        }
+        html, body {
+            padding: 0;
+            margin: 0;
+            font-family: 'Inter', 'Segoe UI', Arial, sans-serif;
+            background: var(--bg);
+            color: var(--text-body);
+            font-size: 13px;
+        }
+        body {
+            min-height: 100vh;
+            display: flex;
+            flex-direction: row;
+            overflow-x: hidden;
+        }
+        .sidebar-layout {
+            display: flex;
+            flex-direction: row;
+            width: 100vw;
+        }
+        /* --- NEW SIDEBAR --- */
+        .sidebar {
+            position: fixed;
+            z-index: 1100;
+            left: 0; top: 0; bottom: 0;
+            height: 100vh;
+            width: var(--menu-min);
+            background: linear-gradient(180deg, var(--primary-dark) 0 100%);
+            color: var(--nav-txt);
+            box-shadow: var(--shadow);
+            border-right: 1px solid #222843;
+            transition: width 0.13s, min-width 0.13s;
+            display: flex;
+            flex-direction: column;
+            align-items: stretch;
+            min-width: var(--menu-min);
+            max-width: var(--menu-max);
+            overflow-x: visible;
+        }
+        .sidebar.menu-expanded {
+            width: var(--menu-max) !important;
+            min-width: var(--menu-max);
+        }
+        .sidebar .sidebar-top {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 63px;
+            margin-bottom: 8px;
+            background: rgba(49,62,100,0.11);
+        }
+        .sidebar .logo-mini {
+            font-size: 1.4rem;
+            font-weight: 900;
+            color: var(--white);
+            /* hide logo when expanded */
+            display: block;
+            transition: opacity 0.08s;
+        }
+        .sidebar.menu-expanded .logo-mini {
+            display: none;
+        }
+        .sidebar .logo-full {
+            display: none;
+            font-size: 1.05rem;
+            font-weight: 900;
+            color: var(--white);
+            margin-left: 5px;
+            letter-spacing: 0.8px;
+        }
+        .sidebar.menu-expanded .logo-full {
+            display: block;
+            margin-left: 7px;
+        }
+        /* Flechita always visible, floats to right (RTL) if menu expanded */
+        .sidebar .expand-btn {
+            position: absolute;
+            top: 17px; right: -13px;
+            background: var(--primary-dark);
+            border: 1.5px solid #222843;
+            box-shadow: 0 2px 14px rgba(57, 70, 160, 0.09);
+            border-radius: 50%;
+            color: #fff;
+            cursor: pointer;
+            padding: 3px 0 0 0;
+            width: 25px; height: 25px;
+            font-size: 18px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: transform .15s;
+            z-index: 3;
+        }
+        .sidebar.menu-expanded .expand-btn {
+            transform: rotate(180deg);
+            right: -14px;
+        }
+        /* SIDEBAR NAV BUTTONS */
+        .side-nav {
+            width: 100%;
+            flex: 1 1 0;
+            display: flex;
+            flex-direction: column;
+            align-items: stretch;
+            gap: 2.5px;
+            margin-top: 10px;
+        }
+        .side-nav-btn {
+            width: 100%;
+            display: flex;
+            align-items: center;
+            border: none;
+            background: transparent;
+            color: #c7d2fe;
+            padding: 8px 0 8px 0;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 13.5px;
+            border-radius: var(--radius-md);
+            margin-bottom: 1.1px;
+            transition: background 0.12s, color 0.12s;
+            min-height: 41px;
+            outline: none;
+            position: relative;
+        }
+        .side-nav-btn:focus { outline: 2px solid #312e81; }
+        .side-nav-btn .side-ico {
+            min-width: 34px;
+            text-align: center;
+            font-size: 1.27em;
+            pointer-events: none;
+            display: flex;
+            align-items: center; justify-content: center;
+        }
+        .side-nav-btn .side-txt {
+            display: none;
+            margin-left: 7px;
+            font-size: 14px;
+            color: #d1d5db;
+            pointer-events: none;
+            transition: color 0.11s;
+            font-weight: 800;
+        }
+        .sidebar.menu-expanded .side-nav-btn .side-txt {
+            display: inline;
+        }
+        .side-nav-btn.active,
+        .side-nav-btn:hover {
+            background: var(--primary);
+            color: #fff;
+        }
+        .side-nav-btn.active .side-txt,
+        .side-nav-btn:hover .side-txt {
+            color: #fff;
+        }
+        /* always visible left bar for spacing main-content */
+        .sidebar-placeholder {
+            width: var(--menu-min);
+            min-width: var(--menu-min);
+            flex-shrink: 0;
+            transition: width 0.12s;
+        }
+        .sidebar.menu-expanded ~ .sidebar-placeholder {
+            width: var(--menu-max) !important;
+            min-width: var(--menu-max);
+        }
+        /* MAIN CONTENT */
+        .main-content {
+            flex: 1 1 0px;
+            min-width: 0;
+            min-height: 100vh;
+            width: 100%;
+            padding: 0;
+            margin-left: var(--menu-min);
+            max-width: calc(100vw - var(--menu-min));
+            transition: margin-left 0.14s, max-width 0.14s;
+        }
+        .sidebar.menu-expanded ~ .main-content {
+            margin-left: var(--menu-max);
+            max-width: calc(100vw - var(--menu-max));
+        }
+        @media (max-width: 900px) {
+            :root{
+                --menu-max: 150px;
+                --menu-min: 38px;
+            }
+            .main-content {
+                font-size: 11.5px !important;
+            }
+        }
+        @media (max-width: 700px) {
+            :root{
+                --menu-max: 115px;
+                --menu-min: 35px;
+            }
+            .main-content {
+                font-size: 10.7px !important;
+            }
+        }
+        @media (max-width: 420px) {
+            :root{--menu-max:72px;--menu-min: 28px;}
+            .main-content { font-size:9.7px !important;}
+        }
+        .container {
+            width: 100%;
+            max-width: 1180px;
+            margin: 17px auto 0 auto;
+            padding: 0 8px 21px 8px;
+            box-sizing: border-box;
+        }
+        .main-title {
+            font-size: 1.09rem;
+            font-weight: 800;
+            color: var(--primary-dark);
+            margin-bottom: 12px;
+            letter-spacing: .3px;
+        }
+        .subtitulo-informe {
+            font-size: 11.7px !important;
+            font-weight: 650;
+            margin-bottom: 0;
+            color: var(--text-title);
+            letter-spacing: .09px;
+        }
+        .tab-content {
+            display: none;
+            animation: fadeIn 0.23s linear;
+        }
+        .tab-content.active {
+            display: block;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(7px);}
+            to { opacity: 1; transform: translateY(0);}
+        }
+        .card-upload, .bloque-empresa {
+            background: var(--white);
+            border-radius: var(--radius-lg);
+            box-shadow: var(--shadow);
+            padding: 11px 10px 10px 10px;
+            margin-bottom: 13px;
+            border: none;
+        }
+        .card-upload h4, .bloque-title {
+            margin: 0 0 6px 0;
+            font-size: 13.6px;
+            font-weight: 800;
+            letter-spacing: .015em;
+            color: var(--primary-dark);
+        }
+        .file-input {
+            width: 100%;
+            padding: 7px;
+            border: 2px dashed #cbd5e1;
+            border-radius: var(--radius-md);
+            background: var(--input-bg);
+            margin: 3px 0 5px 0;
+            box-sizing: border-box;
+            font-size: .98em;
+            transition: border-color 0.22s;
+        }
+        .btn-group { display: flex; gap: 6px; flex-wrap: wrap; }
+        .btn {
+            padding: 7px 9px;
+            border-radius: var(--radius-md);
+            border: none;
+            cursor: pointer;
+            font-weight: 700;
+            font-size: 12.5px;
+            background: var(--primary);
+            color: var(--white);
+            box-shadow: 0 2px 9px rgba(31,41,55,.06);
+            transition: background 0.15s, box-shadow 0.12s, color 0.15s;
+            min-height: 30px;
+            min-width: 72px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .btn-p { background: var(--primary); }
+        .btn-s { background: var(--secondary);}
+        .btn-warn { background: var(--danger);}
+        .btn-alt { background:#e5e7eb; color:var(--text-title);}
+        .btn:disabled { filter: grayscale(.7); cursor: not-allowed;}
+        .btn:hover, .btn-p:hover, .btn-s:hover, .btn-warn:hover, .btn-alt:hover {
+            filter: brightness(0.98);
+            box-shadow: 0 3px 12px rgba(6,182,212,.08);
+        }
+        /* TABLE DESIGN (more compact) */
+        .bloque-empresa {
+            overflow-x: auto;
+            padding: 0;
+            margin-bottom: 9px;
+        }
+        .tabla-inf {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0;
+            min-width: 440px;
+            font-size: 10px;
+            color: var(--text-body);
+            background: var(--white);
+            box-shadow: none;
+            margin-bottom: 0;
+        }
+        .tabla-inf th, .tabla-inf td {
+            padding: 4.2px 3px;
+            border-bottom: 1px solid #e2e8f0;
+            text-align: center;
+            font-size: 10.4px;
+        }
+        .tabla-inf th {
+            font-weight: 800;
+            background: #f1f5f9;
+            color: var(--primary-dark);
+            text-transform: uppercase;
+            letter-spacing: .43px;
+            font-size: 11.2px;
+        }
+        .tabla-inf tr:last-child td { border-bottom: none;}
+        .th-principal {
+            border-bottom: 2px solid var(--primary-dark) !important;
+            background: #c7d2fe !important;
+            color: #3730a3 !important;
+            font-size: 11.2px !important;
+        }
+        .border-left-group { border-left: 2px solid var(--secondary) !important; }
+        .border-right-group { border-right: 2px solid var(--secondary) !important; }
+        .local-title-row th {
+            background: var(--primary-dark) !important;
+            color: white !important;
+            font-size: 12.5px !important;
+            font-weight: 800 !important;
+            letter-spacing: .33px;
+            border-top-left-radius: 7px;
+            border-top-right-radius: 7px;
+        }
+        /* FORM CONTROLS ROW */
+        .controls-row {
+            display: flex;
+            gap: 8px;
+            align-items: flex-end;
+            flex-wrap: wrap;
+            background: var(--white);
+            box-shadow: var(--shadow);
+            border-radius: var(--radius-lg);
+            padding: 7px 9px 7px 9px;
+            margin-bottom: 11px;
+        }
+        .control-item {
+            display: flex;
+            flex-direction: column;
+            gap: 1.3px;
+            font-weight: 600;
+            font-size: 10.1px;
+            color: var(--primary-dark);
+            min-width: 67px;
+        }
+        .controls-row .btn, .controls-row .btn-s {
+            margin-top: 5px;
+            min-width: 70px;
+            font-size: 11.3px;
+            font-weight: 700;
+            padding: 6px 8px;
+        }
+        /* FORM/ELEMENTS */
+        input[type="date"],
+        select,
+        input[type="number"],
+        input[type="text"] {
+            padding: 5px 8px;
+            border-radius: var(--radius-md);
+            border: 1px solid var(--input-border);
+            background: var(--input-bg);
+            font-size: 10.3px;
+            font-family: inherit;
+            color: var(--text-title);
+            transition: border-color 0.13s;
+        }
+        input[type="date"]:focus,
+        select:focus,
+        input[type="number"]:focus,
+        input[type="text"]:focus {
+            outline: 1px solid var(--primary);
+            border-color: var(--primary);
+        }
+        /* MODAL & SITE DIALOGS */
+        .modal, .site-dialog {
+            display:none;
+            position:fixed;
+            top:0; left:0;
+            width:100vw; height:100vh;
+            background:rgba(30,41,59,0.64);
+            align-items:center; justify-content:center;
+            z-index: 3000;
+            padding: 4px;
+            box-sizing: border-box;
+        }
+        .modal-content, .dialog-content {
+            background: var(--white);
+            padding: 10px 9px 14px 9px;
+            border-radius: var(--radius-lg);
+            width: 100%;
+            max-width: 300px;
+            box-shadow: var(--shadow);
+            position: relative;
+        }
+        .dialog-close-btn {
+            position:absolute;
+            top:3px; right:7px;
+            background: none; border:none; color:var(--primary-dark); font-size:18px; cursor:pointer;
+        }
+        .dialog-buttons {
+            margin-top: 7px;
+            display: flex;
+            gap: 8px;
+            justify-content: flex-end;
+        }
+        .dialog-message {
+            font-size: 1em;
+            font-weight: 600;
+            color: var(--primary-dark);
+            margin-bottom: 8px;
+            word-break: break-word;
+        }
+        .site-dialog .dialog-input-label {
+            font-weight: 600;
+            margin-bottom: 2px;
+            display: block;
+            color: var(--primary-dark);
+            font-size:11px;
+        }
+        /* CONFIG GRID */
+        .grid-config {
+            display: flex;
+            flex-direction: column;
+            gap: 7px;
+        }
+        .sucursal-card {
+            background: #f8fafc;
+            border-radius: var(--radius-md);
+            border: 1.2px solid #d1d5db;
+            margin-bottom: 7px;
+            padding: 7px 5px 5px 6px;
+            box-shadow: 0 4px 14px 0 rgba(31,41,55,.064);
+        }
+        .sucursal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 4px;
+            font-size: .93em;
+            font-weight: 700;
+            color: var(--primary-dark);
+        }
+        .caja-card {
+            background: #e0e7ef;
+            border-radius: var(--radius-md);
+            padding: 4px 5px 3px 6px;
+            margin-bottom: 2px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .caja-title {
+            font-weight: 700;
+            font-size: 10.8px;
+            color: #29263a;
+        }
+        .terms-list { margin-left: 7px; margin-top: 1px;}
+        .term-item {
+            background: #f3f4f6;
+            border-radius: 6px;
+            padding: 2px 4px;
+            font-size: 9.5px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.2px;
+            border-left: 2.4px solid #cbd5e1;
+        }
+        .term-item span { display: block;}
+        .term-controls .icon-btn { font-size: 11px;}
+        .icon-btn {
+            background: #f1f5f9;
+            border: none;
+            cursor: pointer;
+            padding: 5px;
+            border-radius: var(--radius-mini);
+            font-size: 11px;
+            color: var(--primary-dark);
+            transition: background 0.18s, color 0.17s;
+            display: inline-flex;
+            align-items: center;
+            margin-left: 1px;
+        }
+        .icon-btn:hover {
+            background: #e0e7ef;
+            color: var(--primary);
+        }
+        .result-box {
+            display:none;
+            padding:5px;
+            background:#f0fdf4;
+            border:1px solid #bbf7d0;
+            border-radius:8px;
+            margin-bottom:5px;
+            font-size: 10px;
+        }
+        #prog-box {
+            display:none;
+            text-align:center;
+            border: 1.1px solid var(--primary);
+            background: var(--white);
+            border-radius: var(--radius-lg);
+            margin: auto;
+            margin-bottom: 9px;
+            max-width: 280px;
+            box-shadow: var(--shadow);
+            padding: 8px;
+        }
+        @media (max-width: 1200px) {
+            .container { padding: 0 4px 7px 4px;}
+            .main-content{ font-size:12.5px;}
         }
     </style>
 </head>
-<body onload="initApp()">
-
-<div class="navbar">
-    <div class="nav-link active" onclick="switchTab(event, 'tab-import')">📥 Importar</div>
-    <div class="nav-link" onclick="switchTab(event, 'tab-config')">⚙️ Red</div>
-    <div class="nav-link" onclick="switchTab(event, 'tab-informes')">📊 Diario</div>
-    <div class="nav-link" onclick="switchTab(event, 'tab-mensual')" style="color: #fbbf24">📈 Mensual</div>
-</div>
-
-<div class="container">
-    <div id="prog-box" class="card-upload" style="display:none; text-align:center; border: 2px solid var(--p);">
-        <div id="prog-txt" style="font-weight:bold; margin-bottom:10px; color: var(--p);">Procesando...</div>
-        <div style="background:#e2e8f0; height:15px; border-radius:10px; overflow:hidden;">
-            <div id="bar-fill" style="background:var(--p); width:0%; height:100%; color: white; font-size: 10px; display: flex; align-items: center; justify-content: center; font-weight: bold;">0%</div>
+<body>
+    <div class="sidebar" id="sidebarNav">
+        <div class="sidebar-top">
+            <span class="logo-mini">📋</span>
+            <span class="logo-full">Menú</span>
+        </div>
+        <button class="expand-btn" tabindex="0" onclick="toggleSidebar()" title="Expandir/Contraer menú">
+            <span id="exp-icon">&#x25B6;</span>
+        </button>
+        <div class="side-nav">
+            <button class="side-nav-btn active" id="tab-btn-importar" onclick="switchTab(event, 'tab-import')" title="Importar archivos">
+                <span class="side-ico">📥</span>
+                <span class="side-txt">Importar</span>
+            </button>
+            <button class="side-nav-btn" id="tab-btn-red" onclick="switchTab(event, 'tab-config')" title="Red y Comisiones">
+                <span class="side-ico">⚙️</span>
+                <span class="side-txt">Red</span>
+            </button>
+            <button class="side-nav-btn" id="tab-btn-diario" onclick="switchTab(event, 'tab-informes')" title="Informe diario">
+                <span class="side-ico">📊</span>
+                <span class="side-txt">Diario</span>
+            </button>
+            <button class="side-nav-btn" id="tab-btn-mensual" onclick="switchTab(event, 'tab-mensual')" title="Informe Mensual">
+                <span class="side-ico">📈</span>
+                <span class="side-txt">Mensual</span>
+            </button>
         </div>
     </div>
-
-    <div id="tab-import" class="tab-content active">
-        <div class="card-upload">
-            <h4>🟢 SEAC</h4>
-            <div id="res-seac" class="result-box" style="display:none; padding:10px; background:#f0fdf4; border:1px solid #bbf7d0; border-radius:8px; margin-bottom:10px;"><div class="res-content"></div></div>
-            <input type="file" id="fileSEAC" multiple class="file-input">
-            <div class="btn-group">
-                <button class="btn btn-p" onclick="procesar('seac', 'fileSEAC', 'ventas', 'res-seac')">VENTAS</button>
-                <button class="btn btn-s" onclick="procesar('seac', 'fileSEAC', 'debitos', 'res-seac')">DÉBITOS</button>
+    <div class="sidebar-placeholder"></div>
+    <div class="main-content" id="mainContent">
+        <!-- Message & Dialog Area -->
+        <div id="msgDialog" class="site-dialog" tabindex="-1">
+            <div class="dialog-content" id="msgDialogContent">
+                <button class="dialog-close-btn" onclick="closeMsgDialog()">&times;</button>
+                <div class="dialog-message" id="msgDialogMsg"></div>
+                <div class="dialog-buttons" id="msgDialogButtons"></div>
             </div>
         </div>
-        <div class="card-upload">
-            <h4>🟠 Cobro Express</h4>
-            <div id="res-ce" class="result-box" style="display:none; padding:10px; background:#fffbeb; border:1px solid #fde68a; border-radius:8px; margin-bottom:10px;"><div class="res-content"></div></div>
-            <input type="file" id="fileCE" multiple class="file-input">
-            <div class="btn-group">
-                <button class="btn btn-p" onclick="procesar('cobroexpress', 'fileCE', 'detallado', 'res-ce')">1. DETALLE</button>
-                <button class="btn btn-s" style="background:#f59e0b" onclick="procesar('cobroexpress', 'fileCE', 'diario', 'res-ce')">2. DIARIO</button>
+        <div class="container">
+            <div id="prog-box">
+                <div id="prog-txt" style="font-weight:bold; margin-bottom:4px; color: var(--primary);">Procesando...</div>
+                <div style="background:#e2e8f0; height:9px; border-radius:8px; overflow:hidden;">
+                    <div id="bar-fill" style="background:var(--primary); width:0%; height:100%; color: white; font-size: 8px; display: flex; align-items: center; justify-content: center; font-weight: bold;">0%</div>
+                </div>
+            </div>
+            <!-- TAB IMPORTAR -->
+            <div id="tab-import" class="tab-content active">
+                <div class="main-title">Importar Archivos</div>
+                <div class="card-upload">
+                    <h4>🟢 SEAC</h4>
+                    <div id="res-seac" class="result-box"><div class="res-content"></div></div>
+                    <input type="file" id="fileSEAC" multiple class="file-input">
+                    <div class="btn-group">
+                        <button class="btn btn-p" onclick="procesar('seac', 'fileSEAC', 'ventas', 'res-seac')">VENTAS</button>
+                        <button class="btn btn-s" onclick="procesar('seac', 'fileSEAC', 'debitos', 'res-seac')">DÉBITOS</button>
+                    </div>
+                </div>
+                <div class="card-upload">
+                    <h4>🟠 Cobro Express</h4>
+                    <div id="res-ce" class="result-box" style="background:#fffbeb; border:1px solid #fde68a;"><div class="res-content"></div></div>
+                    <input type="file" id="fileCE" multiple class="file-input">
+                    <div class="btn-group">
+                        <button class="btn btn-p" onclick="procesar('cobroexpress', 'fileCE', 'detallado', 'res-ce')">1. DETALLE</button>
+                        <button class="btn btn-s" style="background:#f59e0b" onclick="procesar('cobroexpress', 'fileCE', 'diario', 'res-ce')">2. DIARIO</button>
+                    </div>
+                </div>
+                <div class="card-upload">
+                    <h4>🔵 Pago Fácil</h4>
+                    <div id="res-pf" class="result-box" style="background:#eff6ff; border:1px solid #bfdbfe;"><div class="res-content"></div></div>
+                    <input type="file" id="filePF" multiple class="file-input">
+                    <button class="btn btn-p" style="width:100%" onclick="procesar('pagofacil', 'filePF', null, 'res-pf')">SUBIR .TXT</button>
+                </div>
+            </div>
+            <!-- TAB RED -->
+            <div id="tab-config" class="tab-content">
+                <div class="main-title" style="margin-bottom:7px;display:flex;justify-content:space-between;align-items:center;">
+                    <span>Red y Comisiones</span>
+                    <button class="btn btn-p" style="font-size:.90em;min-width:70px;padding:5px 10px" onclick="openEditDialog('sucursal')">+ Sucursal</button>
+                </div>
+                <div id="grid-arbol" class="grid-config"></div>
+            </div>
+            <!-- TAB INFORME DIARIO -->
+            <div id="tab-informes" class="tab-content">
+                <div class="main-title">Informe Diario Detallado</div>
+                <div class="controls-row">
+                    <div class="control-item">Desde
+                        <input type="date" id="fDesde">
+                    </div>
+                    <div class="control-item">Hasta
+                        <input type="date" id="fHasta">
+                    </div>
+                    <div class="control-item">Sucursal
+                        <select id="selSucDiario"><option value="TODAS">TODAS</option></select>
+                    </div>
+                    <button class="btn btn-p" onclick="cargarInforme()">CONSULTAR</button>
+                    <button class="btn btn-s" onclick="exportarTabla('contenedorInformes', 'Diario')">EXCEL</button>
+                </div>
+                <div id="contenedorInformes"></div>
+            </div>
+            <!-- TAB INFORME MENSUAL -->
+            <div id="tab-mensual" class="tab-content">
+                <div class="main-title">Informe Mensual Consolidado</div>
+                <div class="controls-row">
+                    <div class="control-item">Desde
+                        <input type="date" id="mDesde">
+                    </div>
+                    <div class="control-item">Hasta
+                        <input type="date" id="mHasta">
+                    </div>
+                    <button class="btn btn-p" onclick="cargarMensual()">GENERAR</button>
+                    <button class="btn btn-s" onclick="exportarTabla('contenedorMensual', 'Mensual')">EXCEL</button>
+                </div>
+                <div id="contenedorMensual"></div>
             </div>
         </div>
-        <div class="card-upload">
-            <h4>🔵 Pago Fácil</h4>
-            <div id="res-pf" class="result-box" style="display:none; padding:10px; background:#eff6ff; border:1px solid #bfdbfe; border-radius:8px; margin-bottom:10px;"><div class="res-content"></div></div>
-            <input type="file" id="filePF" multiple class="file-input">
-            <button class="btn btn-p" style="width:100%" onclick="procesar('pagofacil', 'filePF', null, 'res-pf')">SUBIR .TXT</button>
+    </div>
+    <!-- MODAL Terminal -->
+    <div id="modalTerm" class="modal" tabindex="-1">
+        <div class="modal-content">
+            <h3 id="modalTitle" style="margin-bottom:5px;font-size:.98em;">Terminal / Comisiones</h3>
+            <input type="hidden" id="mTermId">
+            <input type="hidden" id="mCajaId">
+            <div style="margin-bottom:5px;">
+                <label style="font-weight:bold;display:block;margin-bottom:2px;">Empresa:</label>
+                <select id="mEmp" style="width:100%;"><option value="PAGO FÁCIL">PAGO FÁCIL</option><option value="SEAC">SEAC</option><option value="COBRO EXPRESS">COBRO EXPRESS</option></select>
+            </div>
+            <div style="margin-bottom:5px;">
+                <label style="font-weight:bold;display:block;margin-bottom:2px;">ID / PDV:</label>
+                <input type="text" id="mId" style="width:100%;" placeholder="Ej: A12345">
+            </div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 4px;">
+                <div style="margin-bottom:5px;">
+                    <label style="font-weight:bold;display:block;margin-bottom:2px;">% Comisión Efec.:</label>
+                    <input type="number" id="mComEfec" step="0.001" value="0" style="width:100%;">
+                </div>
+                <div style="margin-bottom:5px;">
+                    <label style="font-weight:bold;display:block;margin-bottom:2px;">$ Fijo Débito:</label>
+                    <input type="number" id="mComDeb" step="0.01" value="0" style="width:100%;">
+                </div>
+            </div>
+            <div class="btn-group" style="margin-top:7px;">
+                <button class="btn btn-p" onclick="guardarTerm()">Guardar</button>
+                <button class="btn btn-alt" style="min-width:50px;" onclick="cerrarModal()">Cerrar</button>
+            </div>
         </div>
     </div>
-
-    <div id="tab-config" class="tab-content">
-        <div style="display:flex; justify-content:space-between; margin-bottom:15px; align-items: center;">
-            <h2 style="margin:0;">Gestión de Red y Comisiones</h2>
-            <button class="btn btn-p" style="max-width:180px;" onclick="nuevaSucursal()">+ Sucursal</button>
-        </div>
-        <div id="grid-arbol" class="grid-config"></div>
-    </div>
-
-    <div id="tab-informes" class="tab-content">
-        <div class="controls-row">
-            <div class="control-item">Desde <input type="date" id="fDesde"></div>
-            <div class="control-item">Hasta <input type="date" id="fHasta"></div>
-            <div class="control-item">Sucursal <select id="selSucDiario"><option value="TODAS">TODAS</option></select></div>
-            <button class="btn btn-p" style="align-self: flex-end;" onclick="cargarInforme()">CONSULTAR</button>
-            <button class="btn btn-s" style="align-self: flex-end;" onclick="exportarTabla('contenedorInformes', 'Diario')">EXCEL</button>
-        </div>
-        <div id="contenedorInformes"></div>
-    </div>
-
-    <div id="tab-mensual" class="tab-content">
-        <div class="controls-row">
-            <div class="control-item">Desde <input type="date" id="mDesde"></div>
-            <div class="control-item">Hasta <input type="date" id="mHasta"></div>
-            <button class="btn btn-p" style="align-self: flex-end;" onclick="cargarMensual()">GENERAR</button>
-            <button class="btn btn-s" style="align-self: flex-end;" onclick="exportarTabla('contenedorMensual', 'Mensual')">EXCEL</button>
-        </div>
-        <div id="contenedorMensual"></div>
-    </div>
-</div>
-
-<div id="modalTerm" class="modal"><div class="modal-content">
-    <h3 id="modalTitle">Terminal / Comisiones</h3>
-    <input type="hidden" id="mTermId">
-    <input type="hidden" id="mCajaId">
-    <div style="margin-bottom:12px;"><label style="font-weight:bold;display:block;margin-bottom:5px;">Empresa:</label>
-        <select id="mEmp" style="width:100%;"><option value="PAGO FÁCIL">PAGO FÁCIL</option><option value="SEAC">SEAC</option><option value="COBRO EXPRESS">COBRO EXPRESS</option></select>
-    </div>
-    <div style="margin-bottom:12px;"><label style="font-weight:bold;display:block;margin-bottom:5px;">ID / PDV:</label>
-        <input type="text" id="mId" style="width:100%;" placeholder="Ej: A12345">
-    </div>
-    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
-        <div style="margin-bottom:15px;"><label style="font-weight:bold;display:block;margin-bottom:5px;">% Comisión Efec:</label>
-            <input type="number" id="mComEfec" step="0.001" value="0" style="width:100%;">
-        </div>
-        <div style="margin-bottom:15px;"><label style="font-weight:bold;display:block;margin-bottom:5px;">$ Fijo Débito:</label>
-            <input type="number" id="mComDeb" step="0.01" value="0" style="width:100%;">
-        </div>
-    </div>
-    <div class="btn-group" style="margin-top:10px;">
-        <button class="btn btn-p" onclick="guardarTerm()">Guardar</button>
-        <button class="btn" style="background:#ddd" onclick="cerrarModal()">Cerrar</button>
-    </div>
-</div></div>
-
-<script>
-    function fmt(n) { 
-        if (n === null || n === undefined || isNaN(n)) return "0,00";
-        return new Intl.NumberFormat('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(n); 
-    }
-
-    async function procesar(ruta, inId, tipo, resId) {
-        const input = document.getElementById(inId);
-        if (input.files.length === 0) return alert("Seleccione archivos.");
-        document.getElementById('prog-box').style.display = 'block';
-        let totN = 0, totE = 0, totD = 0;
-        for (let f of input.files) {
-            const fd = new FormData(); fd.append('archivo', f); if(tipo) fd.append('tipo', tipo);
-            try { 
-                const res = await fetch(`/importar/${ruta}`, { method:'POST', body:fd }); 
-                const d = await res.json(); 
-                if(res.ok) { totN += (d.nuevos || 0); totE += (d.errores || 0); totD += (d.omitidos || 0); }
-                else { throw new Error(d.error || "Error en servidor"); }
-            } catch(ex) { alert("Error: " + ex.message); totE++; }
+    <script>
+        //--- SIDEBAR: MINI/EXPANDED ALWAYS VISIBLE
+        let sidebarExpanded = false;
+        function toggleSidebar() {
+            sidebarExpanded = !sidebarExpanded;
+            document.getElementById('sidebarNav').classList.toggle('menu-expanded', sidebarExpanded);
+            document.querySelector('.sidebar-placeholder').classList.toggle('menu-expanded', sidebarExpanded);
+            document.getElementById('exp-icon').innerHTML = sidebarExpanded ? '&#x25C0;' : '&#x25B6;';
         }
-        const rBox = document.getElementById(resId);
-        rBox.style.display = 'block';
-        rBox.querySelector('.res-content').innerHTML = `<b>📊 Resumen:</b> ✅ ${totN} | ⚠️ ${totD} | ❌ ${totE}`;
-        input.value = ""; document.getElementById('prog-box').style.display = 'none';
-    }
-
-    function exportarTabla(id, name) {
-        const cont = document.getElementById(id);
-        if (!cont.innerHTML.trim()) return alert("Sin datos.");
-        const wb = XLSX.utils.book_new();
-        cont.querySelectorAll('table').forEach((t, i) => XLSX.utils.book_append_sheet(wb, XLSX.utils.table_to_sheet(t), `Hoja_${i+1}`));
-        XLSX.writeFile(wb, `${name}_${new Date().toLocaleDateString()}.xlsx`);
-    }
-
-    async function cargarMensual() {
-        const res = await (await fetch(`/api/informes?desde=${document.getElementById('mDesde').value}&hasta=${document.getElementById('mHasta').value}`)).json();
-        const cont = document.getElementById('contenedorMensual'); cont.innerHTML = '';
-        const dataEmp = { "seac": { title: "SEAC", cl: "title-seac", loc: {} }, "pf": { title: "PAGO FÁCIL", cl: "title-pf", loc: {} }, "ce": { title: "COBRO EXPRESS", cl: "title-ce", loc: {} } };
-        res.forEach(r => {
-            ["seac","pf","ce"].forEach(k => { if(!dataEmp[k].loc[r.suc_nombre]) dataEmp[k].loc[r.suc_nombre] = Array(k==="ce"?10:5).fill(0); });
-            dataEmp.seac.loc[r.suc_nombre][0]+=parseFloat(r.seac_cant_e||0); dataEmp.seac.loc[r.suc_nombre][1]+=parseFloat(r.seac_monto_e||0); dataEmp.seac.loc[r.suc_nombre][2]+=parseFloat(r.seac_cant_d||0); dataEmp.seac.loc[r.suc_nombre][3]+=parseFloat(r.seac_monto_d||0); dataEmp.seac.loc[r.suc_nombre][4]+=((parseFloat(r.seac_monto_e||0)+parseFloat(r.seac_monto_d||0)));
-            dataEmp.pf.loc[r.suc_nombre][0]+=parseFloat(r.pf_cant_e||0); dataEmp.pf.loc[r.suc_nombre][1]+=parseFloat(r.pf_monto_e||0); dataEmp.pf.loc[r.suc_nombre][2]+=parseFloat(r.pf_cant_d||0); dataEmp.pf.loc[r.suc_nombre][3]+=parseFloat(r.pf_monto_d||0); dataEmp.pf.loc[r.suc_nombre][4]+=((parseFloat(r.pf_monto_e||0)+parseFloat(r.pf_monto_d||0)));
-            const mEf = parseFloat(r.ce_monto_e||0), mDe = parseFloat(r.ce_monto_d||0), dev = parseFloat(r.ce_dev||0);
-            dataEmp.ce.loc[r.suc_nombre][0]+=parseFloat(r.ce_cant_e||0); dataEmp.ce.loc[r.suc_nombre][1]+=mEf; dataEmp.ce.loc[r.suc_nombre][2]+=dev; dataEmp.ce.loc[r.suc_nombre][3]+=(mEf-dev); dataEmp.ce.loc[r.suc_nombre][4]+=parseFloat(r.ce_extra_e||0); dataEmp.ce.loc[r.suc_nombre][5]+=parseFloat(r.ce_cant_d||0); dataEmp.ce.loc[r.suc_nombre][6]+=mDe; dataEmp.ce.loc[r.suc_nombre][7]+=parseFloat(r.ce_extra_d||0); dataEmp.ce.loc[r.suc_nombre][8]+=(parseFloat(r.ce_cant_e||0)+parseFloat(r.ce_cant_d||0)); dataEmp.ce.loc[r.suc_nombre][9]+=(mEf+mDe-parseFloat(r.ce_extra_e||0)-parseFloat(r.ce_extra_d||0)-dev);
-        });
-        for (let k in dataEmp) {
-            const e = dataEmp[k];
-            let h = `<div class="bloque-empresa"><div class="bloque-title ${e.cl}">${e.title} - TOTALES ACUMULADOS</div><table class="tabla-inf"><thead><tr><th>NOMBRE LOCAL</th><th class="border-left-group">CANTIDAD<br>EFECTIVO</th><th>MONTO<br>EFECTIVO</th>${k==='ce'?'<th>DEVOLUCIONES<br>RESUMIDO</th><th>EFECTIVO MENOS<br>DEVOLUCIONES</th><th>EXTRA SERVICIO<br>EFECTIVO</th>':''}<th>CANTIDAD<br>DÉBITO</th><th>MONTO<br>DÉBITO</th>${k==='ce'?'<th>EXTRA SERVICIO<br>DÉBITO</th><th>CANTIDAD<br>TOTAL</th>':''}<th class="border-right-group">SUBTOTAL<br>FINAL</th></tr></thead><tbody>`;
-            for (let l in e.loc) { h += `<tr><td style="text-align:left; font-weight:bold">${l}</td>`; e.loc[l].forEach((v,i)=> h += `<td class="${i===0?'border-left-group':i===e.loc[l].length-1?'border-right-group':''}">${([0,2,5,8].includes(i)&&(k==='ce')||[0,2].includes(i)&&k!=='ce') ? parseInt(v) : fmt(v)}</td>`); h += `</tr>`; }
-            cont.innerHTML += h + `</tbody></table></div>`;
+        // Responsive: Collapse sidebar on resize < 420
+        function adjustSidebarOnResize() {
+            if(window.innerWidth < 480) {
+                sidebarExpanded = false;
+                document.getElementById('sidebarNav').classList.remove('menu-expanded');
+                document.querySelector('.sidebar-placeholder').classList.remove('menu-expanded');
+                document.getElementById('exp-icon').innerHTML = '&#x25B6;';
+            }
         }
-    }
+        window.addEventListener('resize', adjustSidebarOnResize);
 
-    async function cargarInforme() {
-        const filtro = document.getElementById('selSucDiario').value;
-        const res = await (await fetch(`/api/informes?desde=${document.getElementById('fDesde').value}&hasta=${document.getElementById('fHasta').value}`)).json();
-        const cont = document.getElementById('contenedorInformes'); cont.innerHTML = '';
-        const sucs = {}; res.forEach(r => { if(filtro!=="TODAS" && r.suc_nombre!==filtro) return; if(!sucs[r.suc_nombre]) sucs[r.suc_nombre]=[]; sucs[r.suc_nombre].push(r); });
-        for (let s in sucs) {
-            let h = `<div class="bloque-empresa"><div class="bloque-title" style="background:#334155">LOCAL: ${s}</div><table class="tabla-inf"><thead><tr><th rowspan="2">FECHA<br>COBRO</th><th rowspan="2">NOMBRE<br>CAJA</th><th colspan="4" class="th-principal border-left-group border-right-group">PAGO FÁCIL</th><th colspan="4" class="th-principal border-right-group">SEAC</th><th colspan="8" class="th-principal border-right-group">COBRO EXPRESS</th><th rowspan="2">SUBTOTAL<br>CAJA</th></tr><tr><th class="border-left-group">CANTIDAD<br>EFECTIVO</th><th>MONTO<br>EFECTIVO</th><th>CANTIDAD<br>DÉBITO</th><th class="border-right-group">MONTO<br>DÉBITO</th><th>CANTIDAD<br>EFECTIVO</th><th>MONTO<br>EFECTIVO</th><th>CANTIDAD<br>DÉBITO</th><th class="border-right-group">MONTO<br>DÉBITO</th><th>CANTIDAD<br>EFECTIVO</th><th>MONTO<br>EFECTIVO</th><th>DEV.</th><th>EFECTIVO -<br>DEVOLUCIONES</th><th>EXTRA<br>EFECTIVO</th><th>CANTIDAD<br>DÉBITO</th><th>MONTO<br>DÉBITO</th><th class="border-right-group">EXTRA<br>DÉBITO</th></tr></thead><tbody>`;
-            sucs[s].forEach(r => {
-                const subCE = (parseFloat(r.ce_monto_e)+parseFloat(r.ce_monto_d)-parseFloat(r.ce_extra_e)-parseFloat(r.ce_extra_d)-parseFloat(r.ce_dev));
-                const total = (parseFloat(r.pf_monto_e)+parseFloat(r.pf_monto_d)) + (parseFloat(r.seac_monto_e)+parseFloat(r.seac_monto_d)) + subCE;
-                h += `<tr><td>${new Date(r.fecha).toLocaleDateString()}</td><td>${r.nombre_caja}</td><td class="border-left-group">${parseInt(r.pf_cant_e)}</td><td>${fmt(r.pf_monto_e)}</td><td>${parseInt(r.pf_cant_d)}</td><td class="border-right-group">${fmt(r.pf_monto_d)}</td><td>${parseInt(r.seac_cant_e)}</td><td>${fmt(r.seac_monto_e)}</td><td>${parseInt(r.seac_cant_d)}</td><td class="border-right-group">${fmt(r.seac_monto_d)}</td><td>${parseInt(r.ce_cant_e)}</td><td>${fmt(r.ce_monto_e)}</td><td style="color:red">${fmt(r.ce_dev)}</td><td style="font-weight:bold">${fmt(parseFloat(r.ce_monto_e)-parseFloat(r.ce_dev))}</td><td>${fmt(r.ce_extra_e)}</td><td>${parseInt(r.ce_cant_d)}</td><td>${fmt(r.ce_monto_d)}</td><td class="border-right-group">${fmt(r.ce_extra_d)}</td><td style="font-weight:bold">${fmt(total)}</td></tr>`;
+        // Custom in-site dialogs (alert/confirm/prompt)
+        window.alert = function(msg) {
+            showMsgDialog(msg, [{text:'Cerrar', action:closeMsgDialog, primary:true}]);
+        };
+        window.confirm = function(msg) {
+            return new Promise(res => {
+                showMsgDialog(msg, [
+                    {text:'Cancelar', action:()=>{closeMsgDialog();res(false);}},
+                    {text:'Aceptar', action:()=>{closeMsgDialog();res(true);}, primary:true}
+                ]);
             });
-            cont.innerHTML += h + `</tbody></table></div>`;
+        };
+        function customPrompt(label, defval="") {
+            return new Promise((resolve) => {
+                showMsgDialog(`
+                    <div>
+                        <label class="dialog-input-label">${label}</label>
+                        <input id="customPromptInput" type="text" style="width:100%;margin-top:2px;padding:6px;border-radius:7px;border:1px solid #cbd5e1;" value="${defval.replace(/"/g,"&quot;")}" autocomplete="off">
+                    </div>
+                `, [
+                    {text:"Cancelar", action:()=>{closeMsgDialog();resolve(null);}},
+                    {text:"Aceptar", action:()=>{closeMsgDialog();resolve(document.getElementById("customPromptInput").value);}, primary:true}
+                ]);
+                setTimeout(()=>{
+                    let inp = document.getElementById("customPromptInput");
+                    if(inp) inp.focus();
+                },40);
+            });
         }
-    }
-
-    async function cargarArbol() {
-        const res = await fetch('/api/arbol-configuracion'); const data = await res.json();
-        const grid = document.getElementById('grid-arbol'); grid.innerHTML = ''; const sucs = {};
-        const selD = document.getElementById('selSucDiario'); selD.innerHTML = '<option value="TODAS">TODAS</option>';
-        data.forEach(r => {
-            if (!sucs[r.suc_id]) { 
-                sucs[r.suc_id] = { id: r.suc_id, nombre: r.suc_nombre, cajas: {} }; 
-                selD.innerHTML += `<option value="${r.suc_nombre}">${r.suc_nombre}</option>`; 
+        function showMsgDialog(message, buttons) {
+            let msgDiv = document.getElementById('msgDialogMsg');
+            msgDiv.innerHTML = message;
+            let btns = document.getElementById('msgDialogButtons');
+            btns.innerHTML = '';
+            if(buttons && buttons.length) {
+                buttons.forEach(b=>{
+                    let btn = document.createElement('button');
+                    btn.className = 'btn '+(b.primary?'btn-p':'btn-alt');
+                    btn.innerText = b.text || 'OK';
+                    btn.onclick = b.action;
+                    btns.appendChild(btn);
+                });
             }
-            if (r.caja_id && !sucs[r.suc_id].cajas[r.caja_id]) sucs[r.suc_id].cajas[r.caja_id] = { id: r.caja_id, nombre: r.nombre_caja, terms: [] };
-            if (r.term_id) sucs[r.suc_id].cajas[r.caja_id].terms.push(r);
+            document.getElementById('msgDialog').style.display = 'flex';
+        }
+        function closeMsgDialog(){
+            document.getElementById('msgDialog').style.display = 'none';
+        }
+        function fmt(n) {
+            if (n === null || n === undefined || isNaN(n)) return "0,00";
+            return new Intl.NumberFormat('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(n);
+        }
+        async function procesar(ruta, inId, tipo, resId) {
+            const input = document.getElementById(inId);
+            if (input.files.length === 0) return alert("Seleccione archivos.");
+            document.getElementById('prog-box').style.display = 'block';
+            let totN = 0, totE = 0, totD = 0;
+            for (let f of input.files) {
+                const fd = new FormData(); fd.append('archivo', f); if(tipo) fd.append('tipo', tipo);
+                try {
+                    const res = await fetch(`/importar/${ruta}`, { method:'POST', body:fd });
+                    const d = await res.json();
+                    if(res.ok) { totN += (d.nuevos || 0); totE += (d.errores || 0); totD += (d.omitidos || 0); }
+                    else { throw new Error(d.error || "Error en servidor"); }
+                } catch(ex) { alert("Error: " + ex.message); totE++; }
+            }
+            const rBox = document.getElementById(resId);
+            rBox.style.display = 'block';
+            rBox.querySelector('.res-content').innerHTML = `<b>📊 Resumen:</b> ✅ ${totN} | ⚠️ ${totD} | ❌ ${totE}`;
+            input.value = ""; document.getElementById('prog-box').style.display = 'none';
+        }
+        function exportarTabla(id, name) {
+            const cont = document.getElementById(id);
+            if (!cont.innerHTML.trim()) return alert("Sin datos.");
+            const wb = XLSX.utils.book_new();
+            cont.querySelectorAll('table').forEach((t, i) => XLSX.utils.book_append_sheet(wb, XLSX.utils.table_to_sheet(t), `Hoja_${i+1}`));
+            XLSX.writeFile(wb, `${name}_${new Date().toLocaleDateString()}.xlsx`);
+        }
+        async function cargarMensual() {
+            const res = await (await fetch(`/api/informes?desde=${document.getElementById('mDesde').value}&hasta=${document.getElementById('mHasta').value}`)).json();
+            const cont = document.getElementById('contenedorMensual'); cont.innerHTML = '';
+            const dataEmp = { "seac": { title: "SEAC", cl: "title-seac", loc: {} }, "pf": { title: "PAGO FÁCIL", cl: "title-pf", loc: {} }, "ce": { title: "COBRO EXPRESS", cl: "title-ce", loc: {} } };
+            res.forEach(r => {
+                ["seac","pf","ce"].forEach(k => { if(!dataEmp[k].loc[r.suc_nombre]) dataEmp[k].loc[r.suc_nombre] = Array(k==="ce"?10:5).fill(0); });
+                dataEmp.seac.loc[r.suc_nombre][0]+=parseFloat(r.seac_cant_e||0); dataEmp.seac.loc[r.suc_nombre][1]+=parseFloat(r.seac_monto_e||0); dataEmp.seac.loc[r.suc_nombre][2]+=parseFloat(r.seac_cant_d||0); dataEmp.seac.loc[r.suc_nombre][3]+=parseFloat(r.seac_monto_d||0); dataEmp.seac.loc[r.suc_nombre][4]+=((parseFloat(r.seac_monto_e||0)+parseFloat(r.seac_monto_d||0)));
+                dataEmp.pf.loc[r.suc_nombre][0]+=parseFloat(r.pf_cant_e||0); dataEmp.pf.loc[r.suc_nombre][1]+=parseFloat(r.pf_monto_e||0); dataEmp.pf.loc[r.suc_nombre][2]+=parseFloat(r.pf_cant_d||0); dataEmp.pf.loc[r.suc_nombre][3]+=parseFloat(r.pf_monto_d||0); dataEmp.pf.loc[r.suc_nombre][4]+=((parseFloat(r.pf_monto_e||0)+parseFloat(r.pf_monto_d||0)));
+                const mEf = parseFloat(r.ce_monto_e||0), mDe = parseFloat(r.ce_monto_d||0), dev = parseFloat(r.ce_dev||0);
+                dataEmp.ce.loc[r.suc_nombre][0]+=parseFloat(r.ce_cant_e||0); dataEmp.ce.loc[r.suc_nombre][1]+=mEf; dataEmp.ce.loc[r.suc_nombre][2]+=dev; dataEmp.ce.loc[r.suc_nombre][3]+=(mEf-dev); dataEmp.ce.loc[r.suc_nombre][4]+=parseFloat(r.ce_extra_e||0); dataEmp.ce.loc[r.suc_nombre][5]+=parseFloat(r.ce_cant_d||0); dataEmp.ce.loc[r.suc_nombre][6]+=mDe; dataEmp.ce.loc[r.suc_nombre][7]+=parseFloat(r.ce_extra_d||0); dataEmp.ce.loc[r.suc_nombre][8]+=(parseFloat(r.ce_cant_e||0)+parseFloat(r.ce_cant_d||0)); dataEmp.ce.loc[r.suc_nombre][9]+=(mEf+mDe-parseFloat(r.ce_extra_e||0)-parseFloat(r.ce_extra_d||0)-dev);
+            });
+            for (let k in dataEmp) {
+                const e = dataEmp[k];
+                let h = `<div class="bloque-empresa"><table class="tabla-inf"><thead><tr><th colspan="${k === 'ce' ? 12 : 7}" class="local-title-row">${e.title} - TOTALES ACUMULADOS</th></tr>`;
+                h += `<tr class="subtitulo-informe"><th>NOMBRE LOCAL</th><th class="border-left-group">CANTIDAD<br>EFECTIVO</th><th>MONTO<br>EFECTIVO</th>${k==='ce'?'<th>DEVOLUCIONES<br>RESUMIDO</th><th>EFECTIVO MENOS<br>DEVOLUCIONES</th><th>EXTRA SERVICIO<br>EFECTIVO</th>':''}<th>CANTIDAD<br>DÉBITO</th><th>MONTO<br>DÉBITO</th>${k==='ce'?'<th>EXTRA SERVICIO<br>DÉBITO</th><th>CANTIDAD<br>TOTAL</th>':''}<th class="border-right-group">SUBTOTAL<br>FINAL</th></tr></thead><tbody>`;
+                for (let l in e.loc) { h += `<tr><td style="text-align:left; font-weight:bold">${l}</td>`; e.loc[l].forEach((v,i)=> h += `<td class="${i===0?'border-left-group':i===e.loc[l].length-1?'border-right-group':''}">${([0,2,5,8].includes(i)&&(k==='ce')||[0,2].includes(i)&&k!=='ce') ? parseInt(v) : fmt(v)}</td>`); h += `</tr>`; }
+                cont.innerHTML += h + `</tbody></table></div>`;
+            }
+        }
+        async function cargarInforme() {
+            const filtro = document.getElementById('selSucDiario').value;
+            const res = await (await fetch(`/api/informes?desde=${document.getElementById('fDesde').value}&hasta=${document.getElementById('fHasta').value}`)).json();
+            const cont = document.getElementById('contenedorInformes'); cont.innerHTML = '';
+            const sucs = {}; res.forEach(r => { if(filtro!=="TODAS" && r.suc_nombre!==filtro) return; if(!sucs[r.suc_nombre]) sucs[r.suc_nombre]=[]; sucs[r.suc_nombre].push(r); });
+            for (let s in sucs) {
+                let h = `<div class="bloque-empresa"><table class="tabla-inf"><thead><tr class="local-title-row"><th colspan="20">LOCAL: ${s}</th></tr>`;
+                h += `<tr class="subtitulo-informe"><th rowspan="2">FECHA<br>COBRO</th><th rowspan="2">NOMBRE<br>CAJA</th><th colspan="4" class="th-principal border-left-group border-right-group">PAGO FÁCIL</th><th colspan="4" class="th-principal border-right-group">SEAC</th><th colspan="8" class="th-principal border-right-group">COBRO EXPRESS</th><th rowspan="2">SUBTOTAL<br>CAJA</th></tr><tr class="subtitulo-informe"><th class="border-left-group">CANTIDAD<br>EFECTIVO</th><th>MONTO<br>EFECTIVO</th><th>CANTIDAD<br>DÉBITO</th><th class="border-right-group">MONTO<br>DÉBITO</th><th>CANTIDAD<br>EFECTIVO</th><th>MONTO<br>EFECTIVO</th><th>CANTIDAD<br>DÉBITO</th><th class="border-right-group">MONTO<br>DÉBITO</th><th>CANTIDAD<br>EFECTIVO</th><th>MONTO<br>EFECTIVO</th><th>DEV.</th><th>EFECTIVO -<br>DEVOLUCIONES</th><th>EXTRA<br>EFECTIVO</th><th>CANTIDAD<br>DÉBITO</th><th>MONTO<br>DÉBITO</th><th class="border-right-group">EXTRA<br>DÉBITO</th></tr></thead><tbody>`;
+                sucs[s].forEach(r => {
+                    const subCE = (parseFloat(r.ce_monto_e)+parseFloat(r.ce_monto_d)-parseFloat(r.ce_extra_e)-parseFloat(r.ce_extra_d)-parseFloat(r.ce_dev));
+                    const total = (parseFloat(r.pf_monto_e)+parseFloat(r.pf_monto_d)) + (parseFloat(r.seac_monto_e)+parseFloat(r.seac_monto_d)) + subCE;
+                    h += `<tr><td>${new Date(r.fecha).toLocaleDateString()}</td><td>${r.nombre_caja}</td><td class="border-left-group">${parseInt(r.pf_cant_e)}</td><td>${fmt(r.pf_monto_e)}</td><td>${parseInt(r.pf_cant_d)}</td><td class="border-right-group">${fmt(r.pf_monto_d)}</td><td>${parseInt(r.seac_cant_e)}</td><td>${fmt(r.seac_monto_e)}</td><td>${parseInt(r.seac_cant_d)}</td><td class="border-right-group">${fmt(r.seac_monto_d)}</td><td>${parseInt(r.ce_cant_e)}</td><td>${fmt(r.ce_monto_e)}</td><td style="color:red">${fmt(r.ce_dev)}</td><td style="font-weight:bold">${fmt(parseFloat(r.ce_monto_e)-parseFloat(r.ce_dev))}</td><td>${fmt(r.ce_extra_e)}</td><td>${parseInt(r.ce_cant_d)}</td><td>${fmt(r.ce_monto_d)}</td><td class="border-right-group">${fmt(r.ce_extra_d)}</td><td style="font-weight:bold">${fmt(total)}</td></tr>`;
+                });
+                cont.innerHTML += h + `</tbody></table></div>`;
+            }
+        }
+        async function cargarArbol() {
+            const res = await fetch('/api/arbol-configuracion'); const data = await res.json();
+            const grid = document.getElementById('grid-arbol'); grid.innerHTML = ''; const sucs = {};
+            const selD = document.getElementById('selSucDiario'); selD.innerHTML = '<option value="TODAS">TODAS</option>';
+            data.forEach(r => {
+                if (!sucs[r.suc_id]) {
+                    sucs[r.suc_id] = { id: r.suc_id, nombre: r.suc_nombre, cajas: {} };
+                    selD.innerHTML += `<option value="${r.suc_nombre}">${r.suc_nombre}</option>`;
+                }
+                if (r.caja_id && !sucs[r.suc_id].cajas[r.caja_id]) sucs[r.suc_id].cajas[r.caja_id] = { id: r.caja_id, nombre: r.nombre_caja, terms: [] };
+                if (r.term_id) sucs[r.suc_id].cajas[r.caja_id].terms.push(r);
+            });
+            for (let sid in sucs) {
+                const s = sucs[sid];
+                let h = `<div class="sucursal-card"><div class="sucursal-header"><span>🏛️ ${s.nombre}</span><div><button class="icon-btn" title="Editar Sucursal" onclick="openEditDialog('sucursal',${s.id},'${s.nombre}')">✏️</button><button class="icon-btn" title="Nueva Caja" onclick="openEditDialog('caja',null,null,${s.id})">➕</button><button class="icon-btn" title="Eliminar Sucursal" onclick="deleteDialog('sucursales',${s.id},'${s.nombre}',cargarArbol)">🗑️</button></div></div>`;
+                for (let cid in s.cajas) {
+                    const c = s.cajas[cid];
+                    h += `<div class="caja-card"><span class="caja-title">📦 ${c.nombre}</span><div><button class="icon-btn" title="Nueva Terminal" onclick="abrirModal(${c.id})">➕</button><button class="icon-btn" title="Editar Caja" onclick="openEditDialog('caja',${c.id},'${c.nombre}',${s.id})">✏️</button><button class="icon-btn" title="Eliminar Caja" onclick="deleteDialog('cajas',${c.id},'${c.nombre}',cargarArbol)">🗑️</button></div></div>`;
+                    h += `<div class="terms-list">`;
+                    c.terms.forEach(t => {
+                        h += `<div class="term-item"><span>💻 <b>${t.empresa}:</b> ${t.identificador_externo} <small style="color:var(--primary-dark)">Efec: <b>${t.comision_porcentaje_efectivo || 0}%</b> | Déb: <b>$${t.comision_fija_debito || 0}</b></small></span><div class="term-controls"><button class="icon-btn" title="Editar Terminal" onclick="editarTerm(${JSON.stringify(t).replace(/"/g, '&quot;')})">✏️</button><button class="icon-btn" title="Eliminar Terminal" onclick="deleteDialog('terminales',${t.term_id},'Terminal',cargarArbol)">🗑️</button></div></div>`;
+                    });
+                    h += `</div>`;
+                }
+                grid.innerHTML += h + `</div>`;
+            }
+        }
+        function openEditDialog(tipo, id, nombre, sid) {
+            let titulo = "", label = "Nombre";
+            let defaultVal = nombre || "";
+            if(tipo=='sucursal') titulo = id ? "Editar Sucursal" : "Nueva Sucursal";
+            if(tipo=='caja') titulo = id ? "Editar Caja" : "Nueva Caja";
+            showMsgDialog(`
+                <div>
+                    <label class="dialog-input-label">${label}:</label>
+                    <input id="editDialogInput" type="text" style="width:100%;margin-top:2px;padding:6px;border-radius:7px;border:1px solid #cbd5e1;" value="${defaultVal.replace(/"/g,"&quot;")}" autocomplete="off">
+                </div>
+            `, [
+                {text:"Cancelar", action:closeMsgDialog},
+                {text:"Guardar", primary:true, action: async ()=>{
+                    let n = document.getElementById("editDialogInput").value.trim();
+                    if(!n) { alert("Ingrese un nombre"); return;}
+                    if(tipo=='sucursal'){
+                        if(id)
+                            await fetch(`/api/sucursales/${id}`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({nombre:n})});
+                        else
+                            await fetch('/api/sucursales',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({nombre:n})});
+                        cargarArbol();
+                    }
+                    if(tipo=='caja'){
+                        if(id)
+                            await fetch(`/api/cajas/${id}`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({nombre:n})});
+                        else
+                            await fetch('/api/cajas',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({nombre:n,sucursal_id:sid})});
+                        cargarArbol();
+                    }
+                    closeMsgDialog();
+                }}
+            ]);
+            document.getElementById('msgDialogMsg').previousSibling.textContent = titulo;
+            setTimeout(()=>{
+                let inp = document.getElementById("editDialogInput");
+                if(inp) inp.focus();
+            },32);
+        }
+        function deleteDialog(tipo,id,desc,after){
+            confirm(`¿Eliminar <b>${desc || ""}</b>?`).then(resp=>{
+                if(resp){
+                    fetch(`/api/${tipo}/${id}`,{method:'DELETE'}).then(()=>{ after && after(); });
+                }
+            })
+        }
+        function initApp() {
+            const h = new Date();
+            document.getElementById('fDesde').value = new Date(h.getFullYear(), h.getMonth(), 1).toISOString().split('T')[0];
+            document.getElementById('fHasta').value = new Date(h.getFullYear(), h.getMonth() + 1, 0).toISOString().split('T')[0];
+            document.getElementById('mDesde').value = document.getElementById('fDesde').value;
+            document.getElementById('mHasta').value = document.getElementById('fHasta').value;
+            cargarArbol();
+        }
+        function abrirModal(cid) {
+            document.getElementById('modalTitle').innerText = "Nueva Terminal";
+            document.getElementById('mCajaId').value = cid;
+            document.getElementById('mTermId').value = "";
+            document.getElementById('mEmp').value = "PAGO FÁCIL";
+            document.getElementById('mId').value = "";
+            document.getElementById('mComEfec').value = 0;
+            document.getElementById('mComDeb').value = 0;
+            document.getElementById('modalTerm').style.display = 'flex';
+        }
+        function editarTerm(t) {
+            document.getElementById('modalTitle').innerText = "Editar Terminal";
+            document.getElementById('mTermId').value = t.term_id;
+            document.getElementById('mEmp').value = t.empresa;
+            document.getElementById('mId').value = t.identificador_externo;
+            document.getElementById('mComEfec').value = t.comision_porcentaje_efectivo;
+            document.getElementById('mComDeb').value = t.comision_fija_debito;
+            document.getElementById('modalTerm').style.display = 'flex';
+        }
+        function cerrarModal() { document.getElementById('modalTerm').style.display = 'none'; }
+        async function guardarTerm() {
+            const id = document.getElementById('mTermId').value;
+            const b = {
+                caja_id: document.getElementById('mCajaId').value,
+                empresa: document.getElementById('mEmp').value,
+                identificador: document.getElementById('mId').value,
+                com_efectivo: document.getElementById('mComEfec').value,
+                com_debito: document.getElementById('mComDeb').value
+            };
+            if(!b.identificador) return alert("ID requerido");
+            const url = id ? `/api/terminales/${id}` : '/api/terminales';
+            const method = id ? 'PUT' : 'POST';
+            await fetch(url, { method, headers:{'Content-Type':'application/json'}, body:JSON.stringify(b) });
+            cerrarModal(); cargarArbol();
+        }
+        document.addEventListener("DOMContentLoaded", function() {
+            initApp();
+            adjustSidebarOnResize();
         });
-        for (let sid in sucs) {
-            const s = sucs[sid];
-            let h = `<div class="card-upload"><div style="display:flex; justify-content:space-between; align-items:center; border-bottom:2px solid #eee; padding-bottom:5px; margin-bottom:10px;"><strong>🏛️ ${s.nombre}</strong><div><button class="icon-btn" onclick="editN('sucursales',${s.id},'${s.nombre}')">✏️</button><button class="icon-btn" onclick="nuevaCaja(${s.id})">➕</button><button class="icon-btn" onclick="borrar('sucursales',${s.id})">🗑️</button></div></div>`;
-            for (let cid in s.cajas) {
-                const c = s.cajas[cid]; h += `<div style="padding:8px; background:#f8fafc; border-radius:8px; margin-bottom:5px; display:flex; justify-content:space-between; align-items:center;"><span>📦 <b>Caja:</b> ${c.nombre}</span><div><button class="icon-btn" onclick="abrirModal(${c.id})">➕</button><button class="icon-btn" onclick="editN('cajas',${c.id},'${c.nombre}')">✏️</button><button class="icon-btn" onclick="borrar('cajas',${c.id})">🗑️</button></div></div>`;
-                c.terms.forEach(t => { h += `<div style="padding:5px 10px; font-size:12px; display:flex; justify-content:space-between; border-left: 2px solid #ddd; margin-left: 20px;"><span>💻 ${t.empresa}: <b>${t.identificador_externo}</b><br><small>Efec: ${t.comision_porcentaje_efectivo}% | Déb: $${t.comision_fija_debito}</small></span><div><button class="icon-btn" style="font-size:12px;" onclick="editarTerm(${JSON.stringify(t).replace(/"/g, '&quot;')})">✏️</button><button class="icon-btn" style="font-size:12px;" onclick="borrar('terminales',${t.term_id})">🗑️</button></div></div>`; });
-            }
-            grid.innerHTML += h + `</div>`;
+        /* TAB HANDLER */
+        function switchTab(e, id) {
+            document.querySelectorAll('.side-nav-btn').forEach(l => l.classList.remove('active'));
+            if (e?.target?.classList?.contains('side-nav-btn')) e.target.classList.add('active');
+            else if(e?.currentTarget?.classList?.contains('side-nav-btn')) e.currentTarget.classList.add('active');
+            document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+            document.getElementById(id).classList.add('active');
+            if(id === 'tab-config') cargarArbol();
         }
-    }
-
-    function initApp() { 
-        const h = new Date(); 
-        document.getElementById('fDesde').value = new Date(h.getFullYear(), h.getMonth(), 1).toISOString().split('T')[0];
-        document.getElementById('fHasta').value = new Date(h.getFullYear(), h.getMonth() + 1, 0).toISOString().split('T')[0];
-        document.getElementById('mDesde').value = document.getElementById('fDesde').value;
-        document.getElementById('mHasta').value = document.getElementById('fHasta').value;
-        cargarArbol(); 
-    }
-    
-    function switchTab(e, id) { 
-        document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active')); 
-        document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active')); 
-        document.getElementById(id).classList.add('active'); e.target.classList.add('active'); 
-        if(id === 'tab-config') cargarArbol(); 
-    }
-    
-    async function editN(t,id,a) { const n = prompt("Editar nombre:",a); if(n) { await fetch(`/api/${t}/${id}`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({nombre:n})}); cargarArbol(); } }
-    async function borrar(t,id) { if(confirm("¿Eliminar?")) { await fetch(`/api/${t}/${id}`,{method:'DELETE'}); cargarArbol(); } }
-    async function nuevaCaja(sid) { const n = prompt("Nombre caja:"); if(n) { await fetch('/api/cajas',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sucursal_id:sid, nombre:n})}); cargarArbol(); } }
-    async function nuevaSucursal() { const n = prompt("Nombre sucursal:"); if(n) { await fetch('/api/sucursales',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({nombre:n})}); cargarArbol(); } }
-    
-    function abrirModal(cid) { 
-        document.getElementById('modalTitle').innerText = "Nueva Terminal";
-        document.getElementById('mCajaId').value = cid; 
-        document.getElementById('mTermId').value = "";
-        document.getElementById('mId').value = "";
-        document.getElementById('mComEfec').value = 0;
-        document.getElementById('mComDeb').value = 0;
-        document.getElementById('modalTerm').style.display = 'flex'; 
-    }
-
-    function editarTerm(t) {
-        document.getElementById('modalTitle').innerText = "Editar Terminal";
-        document.getElementById('mTermId').value = t.term_id;
-        document.getElementById('mEmp').value = t.empresa;
-        document.getElementById('mId').value = t.identificador_externo;
-        document.getElementById('mComEfec').value = t.comision_porcentaje_efectivo;
-        document.getElementById('mComDeb').value = t.comision_fija_debito;
-        document.getElementById('modalTerm').style.display = 'flex';
-    }
-
-    function cerrarModal() { document.getElementById('modalTerm').style.display = 'none'; }
-
-    async function guardarTerm() { 
-        const id = document.getElementById('mTermId').value;
-        const b = { 
-            caja_id: document.getElementById('mCajaId').value, 
-            empresa: document.getElementById('mEmp').value, 
-            identificador: document.getElementById('mId').value, 
-            com_efectivo: document.getElementById('mComEfec').value, 
-            com_debito: document.getElementById('mComDeb').value 
-        }; 
-        if(!b.identificador) return alert("ID requerido");
-        const url = id ? `/api/terminales/${id}` : '/api/terminales';
-        const method = id ? 'PUT' : 'POST';
-        await fetch(url, { method, headers:{'Content-Type':'application/json'}, body:JSON.stringify(b) }); 
-        cerrarModal(); cargarArbol(); 
-    }
-</script>
+    </script>
 </body>
 </html>
