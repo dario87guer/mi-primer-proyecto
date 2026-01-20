@@ -4,9 +4,17 @@ const { Pool } = require('pg');
 const cors = require('cors');
 const multer = require('multer');
 const fs = require('fs');
+const path = require('path');
 const XLSX = require('xlsx');
 
 const app = express();
+
+// Asegurar carpeta uploads en Render
+const uploadDir = path.join(__dirname, 'uploads');
+if (!fs.existsSync(uploadDir)) {
+    fs.mkdirSync(uploadDir, { recursive: true });
+}
+
 const upload = multer({ dest: 'uploads/' });
 
 app.use(cors());
@@ -19,9 +27,10 @@ const pool = new Pool({
   database: process.env.DB_NAME,
   password: process.env.DB_PASSWORD,
   port: process.env.DB_PORT,
+  ssl: { rejectUnauthorized: false } // Requerido para la mayoría de DBs en la nube
 });
 
-// --- SISTEMA DE PROGRESO REAL ---
+// --- SISTEMA DE PROGRESO ---
 let clients = [];
 function sendProgress(p, t) {
     clients.forEach(c => c.res.write(`data: ${JSON.stringify({p, t})}\n\n`));
@@ -35,7 +44,7 @@ app.get('/api/progress', (req, res) => {
     req.on('close', () => clients = clients.filter(c => c.id !== id));
 });
 
-// --- HELPERS ESTABLES ---
+// --- HELPERS ESTABLES (NO TOCAR) ---
 function normalizeDate(val) {
     if (!val) return null;
     let s = String(val).trim();
@@ -80,10 +89,19 @@ function cleanText(val) {
     return String(val).toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
 }
 
-// --- API RED ---
+// --- API RED CON COMISIONES ---
 app.get('/api/arbol-configuracion', async (req, res) => {
     try {
-        const result = await pool.query(`SELECT s.id as suc_id, s.nombre as suc_nombre, c.id as caja_id, c.nombre_caja, t.id as term_id, t.identificador_externo, t.empresa FROM sucursales s LEFT JOIN cajas c ON s.id = c.sucursal_id LEFT JOIN terminales t ON c.id = t.caja_id ORDER BY s.nombre, c.nombre_caja, t.identificador_externo`);
+        const result = await pool.query(`
+            SELECT s.id as suc_id, s.nombre as suc_nombre, 
+            c.id as caja_id, c.nombre_caja, 
+            t.id as term_id, t.identificador_externo, t.empresa,
+            t.comision_porcentaje 
+            FROM sucursales s 
+            LEFT JOIN cajas c ON s.id = c.sucursal_id 
+            LEFT JOIN terminales t ON c.id = t.caja_id 
+            ORDER BY s.nombre, c.nombre_caja, t.identificador_externo
+        `);
         res.json(result.rows);
     } catch (err) { res.status(500).json({ error: err.message }); }
 });
@@ -93,7 +111,10 @@ app.post('/api/:tipo', async (req, res) => {
     try {
         if (tipo === 'sucursales') await pool.query('INSERT INTO sucursales (nombre) VALUES ($1)', [req.body.nombre]);
         if (tipo === 'cajas') await pool.query('INSERT INTO cajas (sucursal_id, nombre_caja) VALUES ($1, $2)', [req.body.sucursal_id, req.body.nombre]);
-        if (tipo === 'terminales') await pool.query('INSERT INTO terminales (caja_id, empresa, identificador_externo) VALUES ($1, $2, $3)', [req.body.caja_id, req.body.empresa, req.body.identificador]);
+        if (tipo === 'terminales') {
+            await pool.query('INSERT INTO terminales (caja_id, empresa, identificador_externo, comision_porcentaje) VALUES ($1, $2, $3, $4)', 
+            [req.body.caja_id, req.body.empresa, req.body.identificador, req.body.comision || 0]);
+        }
         res.json({ mensaje: 'Ok' });
     } catch (e) { res.status(500).json({ error: e.message }); }
 });
@@ -106,7 +127,10 @@ app.put('/api/:tipo/:id', async (req, res) => {
             const col = tipo === 'sucursales' ? 'nombre' : 'nombre_caja';
             await pool.query(`UPDATE ${tabla} SET ${col} = $1 WHERE id = $2`, [req.body.nombre, id]);
         }
-        if (tipo === 'terminales') await pool.query('UPDATE terminales SET identificador_externo=$1, empresa=$2 WHERE id=$3', [req.body.identificador, req.body.empresa, id]);
+        if (tipo === 'terminales') {
+            await pool.query('UPDATE terminales SET identificador_externo=$1, empresa=$2, comision_porcentaje=$3 WHERE id=$4', 
+            [req.body.identificador, req.body.empresa, req.body.comision, id]);
+        }
         res.json({ mensaje: 'Ok' });
     } catch (e) { res.status(500).json({ error: e.message }); }
 });
@@ -119,7 +143,7 @@ app.delete('/api/:tipo/:id', async (req, res) => {
     } catch (e) { res.status(500).json({ error: "No se puede eliminar." }); }
 });
 
-// --- API INFORMES ---
+// --- API INFORMES (NO TOCAR LÓGICA) ---
 app.get('/api/informes', async (req, res) => {
     const { desde, hasta } = req.query;
     let query = `
@@ -152,7 +176,6 @@ app.get('/api/informes', async (req, res) => {
 // --- IMPORTADORES BLINDADOS ---
 app.post('/importar/seac', upload.single('archivo'), async (req, res) => {
     let n=0, e=0, dup=0; const tipo = req.body.tipo || 'ventas';
-    console.log(`\n>>> SEAC RECIBIDO: ${tipo.toUpperCase()} <<<`);
     try {
         const workbook = XLSX.readFile(req.file.path, { raw: true });
         const data = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]], { raw: true });
@@ -174,22 +197,20 @@ app.post('/importar/seac', upload.single('archivo'), async (req, res) => {
             const it = consolidado[k]; const med = tipo === 'ventas' ? 'EFECTIVO' : 'DEBITO';
             try {
                 const checkTerm = await pool.query(`SELECT 1 FROM terminales WHERE identificador_externo = $1`, [it.pdv]);
-                if (checkTerm.rowCount === 0) { console.log(`[SEAC OMITIDO] Terminal ${it.pdv} no está en la RED.`); dup++; continue; }
+                if (checkTerm.rowCount === 0) { dup++; continue; }
                 if (med === 'DEBITO') await pool.query(`UPDATE transacciones SET importe = importe - $1 WHERE empresa = 'SEAC' AND identificador_terminal = $2 AND fecha = $3 AND medio_pago = 'EFECTIVO'`, [it.total, it.pdv, it.fecha]);
                 const idU = `SEAC_${it.pdv}_${it.fecha}_${med}`;
                 const result = await pool.query(`INSERT INTO transacciones (id_unico_empresa, fecha, importe, empresa, identificador_terminal, medio_pago, cantidad) VALUES ($1, $2, $3, 'SEAC', $4, $5, $6) ON CONFLICT (id_unico_empresa) DO NOTHING`, [idU, it.fecha, it.total, it.pdv, med, it.cuenta]);
-                if (result.rowCount > 0) { n++; console.log(`[SEAC OK] PDV: ${it.pdv} | F: ${it.fecha} | $ ${it.total}`); } 
-                else { dup++; console.log(`[SEAC DUP] PDV: ${it.pdv} | F: ${it.fecha}`); }
-            } catch (dbErr) { e++; console.error(`[ERROR DB SEAC] PDV: ${it.pdv} | Detalle: ${dbErr.message}`); }
+                if (result.rowCount > 0) n++; else dup++;
+            } catch (dbErr) { e++; console.error(dbErr); }
         }
         res.json({ nuevos: n, errores: e, omitidos: dup });
-    } catch (ex) { console.error(`[ERR CRITICO SEAC]`, ex.message); res.status(500).json({ error: ex.message }); }
+    } catch (ex) { res.status(500).json({ error: ex.message }); }
     finally { if(req.file) fs.unlinkSync(req.file.path); }
 });
 
 app.post('/importar/cobroexpress', upload.single('archivo'), async (req, res) => {
     const tipo = req.body.tipo; let n = 0, e = 0, dup = 0;
-    console.log(`\n>>> COBRO EXPRESS: ${tipo.toUpperCase()} <<<`);
     try {
         const workbook = XLSX.readFile(req.file.path);
         const sn = tipo === 'detallado' ? 'DETALLADO' : workbook.SheetNames[0];
@@ -214,7 +235,6 @@ app.post('/importar/cobroexpress', upload.single('archivo'), async (req, res) =>
                     if (!resumen[clave]) resumen[clave] = { pdv, fecha: fN, medio: med, total: 0, cant: 0 };
                     resumen[clave].total += imp; resumen[clave].cant++;
                 }
-                if (i % 500 === 0) sendProgress(Math.round((i/rows.length)*100), `Analizando Detallado...`);
             }
             for (let k in resumen) {
                 const it = resumen[k];
@@ -223,8 +243,7 @@ app.post('/importar/cobroexpress', upload.single('archivo'), async (req, res) =>
                     if (checkTerm.rowCount === 0) { dup++; continue; }
                     const idU = `CE_DET_${it.pdv}_${it.fecha}_${it.medio}`;
                     const result = await pool.query(`INSERT INTO transacciones (id_unico_empresa, fecha, importe, empresa, identificador_terminal, medio_pago, cantidad) VALUES ($1,$2,$3,'COBRO EXPRESS',$4,$5,$6) ON CONFLICT (id_unico_empresa) DO NOTHING`, [idU, it.fecha, it.total, it.pdv, it.medio, it.cant]);
-                    if (result.rowCount > 0) { n++; console.log(`[CE DET OK] PDV: ${it.pdv} | $ ${it.total}`); }
-                    else { dup++; }
+                    if (result.rowCount > 0) n++; else dup++;
                 } catch (dbE) { e++; }
             }
         } else {
@@ -239,18 +258,17 @@ app.post('/importar/cobroexpress', upload.single('archivo'), async (req, res) =>
                 try {
                     await pool.query(`INSERT INTO transacciones (id_unico_empresa, fecha, importe, empresa, identificador_terminal, medio_pago, cantidad, devoluciones, importe_extra_efectivo) VALUES ($1,$2,0,'COBRO EXPRESS',$3,'EFECTIVO',0,$4,$5) ON CONFLICT (id_unico_empresa) DO UPDATE SET devoluciones=EXCLUDED.devoluciones, importe_extra_efectivo=EXCLUDED.importe_extra_efectivo`, [`CE_DET_${pdv}_${fN}_EFECTIVO`, fN, pdv, dev, extE]);
                     await pool.query(`INSERT INTO transacciones (id_unico_empresa, fecha, importe, empresa, identificador_terminal, medio_pago, cantidad, importe_extra_debito) VALUES ($1,$2,0,'COBRO EXPRESS',$3,'DEBITO',0,$4) ON CONFLICT (id_unico_empresa) DO UPDATE SET importe_extra_debito=EXCLUDED.importe_extra_debito`, [`CE_DET_${pdv}_${fN}_DEBITO`, fN, pdv, extD]);
-                    n++; console.log(`[CE DIA OK] PDV: ${pdv} | Dev: ${dev}`);
+                    n++; 
                 } catch(dbE) { e++; }
             }
         }
         res.json({ nuevos: n, errores: e, omitidos: dup });
-    } catch (ex) { console.error(`[ERR CE]`, ex.message); res.status(500).json({ error: ex.message }); }
+    } catch (ex) { res.status(500).json({ error: ex.message }); }
     finally { if(req.file) fs.unlinkSync(req.file.path); }
 });
 
 app.post('/importar/pagofacil', upload.single('archivo'), async (req, res) => {
     let n=0, e=0, dup=0;
-    console.log(`\n>>> PAGO FÁCIL RECIBIDO <<<`);
     try {
         const fullContent = fs.readFileSync(req.file.path, 'utf8');
         const lines = fullContent.split(/\r?\n/);
@@ -271,15 +289,14 @@ app.post('/importar/pagofacil', upload.single('archivo'), async (req, res) => {
                     if (cantMatch && cantMatch[1]) cantDetectada = parseInt(cantMatch[1].replace(',', '.'));
                     const idU = `PF_${pdv}_${fL.replace(/\//g,'')}_${imp}_${med}`;
                     const result = await pool.query(`INSERT INTO transacciones (id_unico_empresa, fecha, importe, empresa, identificador_terminal, medio_pago, cantidad) VALUES ($1, TO_DATE($2, 'DD/MM/YY'), $3, 'PAGO FÁCIL', $4, $5, $6) ON CONFLICT (id_unico_empresa) DO NOTHING`, [idU, fL, imp, pdv, med, cantDetectada]);
-                    if (result.rowCount > 0) { n++; console.log(`[PF OK] T: ${pdv} | $ ${imp} | Cant: ${cantDetectada}`); }
-                    else { dup++; }
+                    if (result.rowCount > 0) n++; else dup++;
                 } catch (dbE) { e++; }
             }
         }
         res.json({ nuevos: n, errores: e, omitidos: dup });
-    } catch (ex) { console.error(`[ERR PF]`, ex.message); res.status(500).json({ error: ex.message }); }
+    } catch (ex) { res.status(500).json({ error: ex.message }); }
     finally { if(req.file) fs.unlinkSync(req.file.path); }
 });
 
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`🚀 Sistema Dario v5.01 - Corriendo en puerto ${PORT}`));
+app.listen(PORT, () => console.log(`🚀 Sistema Dario v5.02 - Online en puerto ${PORT}`));
