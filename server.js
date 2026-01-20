@@ -9,7 +9,6 @@ const XLSX = require('xlsx');
 
 const app = express();
 
-// Asegurar carpeta uploads en Render
 const uploadDir = path.join(__dirname, 'uploads');
 if (!fs.existsSync(uploadDir)) {
     fs.mkdirSync(uploadDir, { recursive: true });
@@ -27,7 +26,7 @@ const pool = new Pool({
   database: process.env.DB_NAME,
   password: process.env.DB_PASSWORD,
   port: process.env.DB_PORT,
-  ssl: { rejectUnauthorized: false } // Requerido para la mayoría de DBs en la nube
+  ssl: process.env.DB_HOST !== 'localhost' ? { rejectUnauthorized: false } : false
 });
 
 // --- SISTEMA DE PROGRESO ---
@@ -44,7 +43,7 @@ app.get('/api/progress', (req, res) => {
     req.on('close', () => clients = clients.filter(c => c.id !== id));
 });
 
-// --- HELPERS ESTABLES (NO TOCAR) ---
+// --- HELPERS ESTABLES ---
 function normalizeDate(val) {
     if (!val) return null;
     let s = String(val).trim();
@@ -89,14 +88,14 @@ function cleanText(val) {
     return String(val).toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
 }
 
-// --- API RED CON COMISIONES ---
+// --- API RED ACTUALIZADA ---
 app.get('/api/arbol-configuracion', async (req, res) => {
     try {
         const result = await pool.query(`
             SELECT s.id as suc_id, s.nombre as suc_nombre, 
             c.id as caja_id, c.nombre_caja, 
             t.id as term_id, t.identificador_externo, t.empresa,
-            t.comision_porcentaje 
+            t.comision_porcentaje_efectivo, t.comision_fija_debito 
             FROM sucursales s 
             LEFT JOIN cajas c ON s.id = c.sucursal_id 
             LEFT JOIN terminales t ON c.id = t.caja_id 
@@ -112,8 +111,10 @@ app.post('/api/:tipo', async (req, res) => {
         if (tipo === 'sucursales') await pool.query('INSERT INTO sucursales (nombre) VALUES ($1)', [req.body.nombre]);
         if (tipo === 'cajas') await pool.query('INSERT INTO cajas (sucursal_id, nombre_caja) VALUES ($1, $2)', [req.body.sucursal_id, req.body.nombre]);
         if (tipo === 'terminales') {
-            await pool.query('INSERT INTO terminales (caja_id, empresa, identificador_externo, comision_porcentaje) VALUES ($1, $2, $3, $4)', 
-            [req.body.caja_id, req.body.empresa, req.body.identificador, req.body.comision || 0]);
+            await pool.query(`
+                INSERT INTO terminales (caja_id, empresa, identificador_externo, comision_porcentaje_efectivo, comision_fija_debito) 
+                VALUES ($1, $2, $3, $4, $5)`, 
+                [req.body.caja_id, req.body.empresa, req.body.identificador, req.body.com_efectivo || 0, req.body.com_debito || 0]);
         }
         res.json({ mensaje: 'Ok' });
     } catch (e) { res.status(500).json({ error: e.message }); }
@@ -128,8 +129,10 @@ app.put('/api/:tipo/:id', async (req, res) => {
             await pool.query(`UPDATE ${tabla} SET ${col} = $1 WHERE id = $2`, [req.body.nombre, id]);
         }
         if (tipo === 'terminales') {
-            await pool.query('UPDATE terminales SET identificador_externo=$1, empresa=$2, comision_porcentaje=$3 WHERE id=$4', 
-            [req.body.identificador, req.body.empresa, req.body.comision, id]);
+            await pool.query(`
+                UPDATE terminales SET identificador_externo=$1, empresa=$2, comision_porcentaje_efectivo=$3, comision_fija_debito=$4 
+                WHERE id=$5`, 
+                [req.body.identificador, req.body.empresa, req.body.com_efectivo, req.body.com_debito, id]);
         }
         res.json({ mensaje: 'Ok' });
     } catch (e) { res.status(500).json({ error: e.message }); }
@@ -143,7 +146,7 @@ app.delete('/api/:tipo/:id', async (req, res) => {
     } catch (e) { res.status(500).json({ error: "No se puede eliminar." }); }
 });
 
-// --- API INFORMES (NO TOCAR LÓGICA) ---
+// --- API INFORMES ---
 app.get('/api/informes', async (req, res) => {
     const { desde, hasta } = req.query;
     let query = `
@@ -202,7 +205,7 @@ app.post('/importar/seac', upload.single('archivo'), async (req, res) => {
                 const idU = `SEAC_${it.pdv}_${it.fecha}_${med}`;
                 const result = await pool.query(`INSERT INTO transacciones (id_unico_empresa, fecha, importe, empresa, identificador_terminal, medio_pago, cantidad) VALUES ($1, $2, $3, 'SEAC', $4, $5, $6) ON CONFLICT (id_unico_empresa) DO NOTHING`, [idU, it.fecha, it.total, it.pdv, med, it.cuenta]);
                 if (result.rowCount > 0) n++; else dup++;
-            } catch (dbErr) { e++; console.error(dbErr); }
+            } catch (dbErr) { e++; }
         }
         res.json({ nuevos: n, errores: e, omitidos: dup });
     } catch (ex) { res.status(500).json({ error: ex.message }); }
@@ -299,4 +302,4 @@ app.post('/importar/pagofacil', upload.single('archivo'), async (req, res) => {
 });
 
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`🚀 Sistema Dario v5.02 - Online en puerto ${PORT}`));
+app.listen(PORT, () => console.log(`🚀 Control Transacciones Impuestos v5.04 - Puerto ${PORT}`));

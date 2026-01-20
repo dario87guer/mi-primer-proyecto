@@ -3,50 +3,56 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Cobranzas | Dario Morales</title>
+    <title>Control Transacciones Impuestos</title>
     <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
     <style>
         :root { --p: #4f46e5; --s: #10b981; --nav: #1e293b; --bg: #f3f4f6; }
         body { font-family: 'Segoe UI', sans-serif; background: var(--bg); margin: 0; font-size: 14px; overflow-x: auto; }
-        .navbar { background: var(--nav); display: flex; padding: 0 10px; position: sticky; top: 0; z-index: 1000; overflow-x: auto; }
+        
+        .navbar { background: var(--nav); display: flex; padding: 0 10px; position: sticky; top: 0; z-index: 1000; overflow-x: auto; border-bottom: 2px solid var(--p); }
         .nav-link { color: #94a3b8; padding: 15px 15px; cursor: pointer; border-bottom: 3px solid transparent; font-weight: 600; white-space: nowrap; }
         .nav-link.active { color: white; border-bottom-color: var(--p); }
         
         .container { min-width: 360px; max-width: 100%; margin: 10px auto; padding: 0 10px; box-sizing: border-box; }
         
-        /* CARD ADAPTATION */
+        /* OCULTAR SECCIONES CORRECTAMENTE */
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+
         .card-upload { background: white; border-radius: 12px; border: 1px solid #e5e7eb; padding: 15px; margin-bottom: 10px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
         .card-upload h4 { margin: 0 0 10px 0; font-size: 18px; border-bottom: 1px solid #f1f5f9; padding-bottom: 5px; }
         
         .file-input { width: 100%; padding: 10px; border: 2px dashed #cbd5e1; border-radius: 8px; margin: 10px 0; background: #f8fafc; box-sizing: border-box; }
         
         .btn-group { display: flex; gap: 8px; flex-wrap: wrap; }
-        .btn { padding: 12px 15px; border-radius: 8px; border: none; cursor: pointer; font-weight: 700; font-size: 14px; transition: 0.2s; min-height: 44px; flex: 1; min-width: 120px; }
+        .btn { padding: 12px 15px; border-radius: 8px; border: none; cursor: pointer; font-weight: 700; font-size: 14px; transition: 0.2s; min-height: 44px; flex: 1; min-width: 120px; display: inline-flex; align-items: center; justify-content: center; }
         .btn-p { background: var(--p); color: white; } .btn-s { background: var(--s); color: white; }
         
-        /* TABLAS RESPONSIVE */
+        /* ESTÉTICA DE TABLAS RESTAURADA */
         .bloque-empresa { background: white; border-radius: 12px; border: 1px solid #cbd5e1; margin-bottom: 20px; overflow-x: auto; -webkit-overflow-scrolling: touch; }
-        .tabla-inf { width: 100%; border-collapse: collapse; min-width: 1000px; }
+        .tabla-inf { width: 100%; border-collapse: collapse; min-width: 1100px; }
         .tabla-inf th, .tabla-inf td { padding: 8px 4px; border: 1px solid #f1f5f9; text-align: center; font-size: 12px; }
-        .th-principal { font-weight: 900 !important; font-size: 13px !important; border: 2px solid #334155 !important; background: #e2e8f0 !important; text-transform: uppercase; }
         
+        .th-principal { font-weight: 900 !important; font-size: 14px !important; border: 2px solid #334155 !important; background: #e2e8f0 !important; text-transform: uppercase; color: #1e293b; }
+        .border-left-group { border-left: 3px solid #64748b !important; }
+        .border-right-group { border-right: 3px solid #64748b !important; }
+
         /* CONTROLES ALINEADOS */
-        .controls-row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; justify-content: center; }
-        .control-item { display: flex; flex-direction: column; gap: 2px; font-weight: 600; font-size: 13px; }
-        input[type="date"], select, input[type="number"] { padding: 8px; border-radius: 8px; border: 1px solid #cbd5e1; height: 40px; font-size: 14px; }
+        .controls-row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; justify-content: center; background: #fff; padding: 15px; border-radius: 12px; margin-bottom: 15px; border: 1px solid #e5e7eb; }
+        .control-item { display: flex; flex-direction: column; gap: 2px; font-weight: 600; font-size: 13px; color: #475569; }
+        input[type="date"], select, input[type="number"], input[type="text"] { padding: 8px 12px; border-radius: 8px; border: 1px solid #cbd5e1; height: 42px; font-size: 14px; font-family: inherit; }
 
-        /* MODAL */
         .modal { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.6); align-items:center; justify-content:center; z-index: 2000; padding: 10px; box-sizing: border-box; }
-        .modal-content { background:white; padding:20px; border-radius:15px; width:100%; max-width: 400px; box-sizing: border-box; }
+        .modal-content { background:white; padding:25px; border-radius:15px; width:100%; max-width: 450px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); }
 
-        /* GRID RED */
-        .grid-config { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 15px; }
-        .icon-btn { background: #f1f5f9; border: none; cursor: pointer; padding: 8px; border-radius: 6px; font-size: 16px; }
+        .grid-config { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 15px; }
+        .icon-btn { background: #f1f5f9; border: none; cursor: pointer; padding: 8px; border-radius: 6px; font-size: 16px; transition: 0.2s; }
+        .icon-btn:hover { background: #e2e8f0; }
 
         @media (max-width: 600px) {
             .nav-link { padding: 12px 10px; font-size: 13px; }
-            .btn { width: 100%; }
             .controls-row { flex-direction: column; align-items: stretch; }
+            .btn { width: 100%; }
         }
     </style>
 </head>
@@ -95,37 +101,57 @@
     </div>
 
     <div id="tab-config" class="tab-content">
-        <div style="display:flex; justify-content:space-between; margin-bottom:15px; align-items: center;"><h2>Gestión de Red</h2><button class="btn btn-p" style="max-width:180px;" onclick="nuevaSucursal()">+ Sucursal</button></div>
+        <div style="display:flex; justify-content:space-between; margin-bottom:15px; align-items: center;">
+            <h2 style="margin:0;">Gestión de Red y Comisiones</h2>
+            <button class="btn btn-p" style="max-width:180px;" onclick="nuevaSucursal()">+ Sucursal</button>
+        </div>
         <div id="grid-arbol" class="grid-config"></div>
     </div>
 
     <div id="tab-informes" class="tab-content">
-        <div class="card-upload controls-row">
+        <div class="controls-row">
             <div class="control-item">Desde <input type="date" id="fDesde"></div>
             <div class="control-item">Hasta <input type="date" id="fHasta"></div>
             <div class="control-item">Sucursal <select id="selSucDiario"><option value="TODAS">TODAS</option></select></div>
-            <button class="btn btn-p" onclick="cargarInforme()">CONSULTAR</button>
-            <button class="btn btn-s" onclick="exportarTabla('contenedorInformes', 'Diario')">EXCEL</button>
+            <button class="btn btn-p" style="align-self: flex-end;" onclick="cargarInforme()">CONSULTAR</button>
+            <button class="btn btn-s" style="align-self: flex-end;" onclick="exportarTabla('contenedorInformes', 'Diario')">EXCEL</button>
         </div>
         <div id="contenedorInformes"></div>
     </div>
 
     <div id="tab-mensual" class="tab-content">
-        <div class="card-upload controls-row">
+        <div class="controls-row">
             <div class="control-item">Desde <input type="date" id="mDesde"></div>
             <div class="control-item">Hasta <input type="date" id="mHasta"></div>
-            <button class="btn btn-p" onclick="cargarMensual()">GENERAR</button>
-            <button class="btn btn-s" onclick="exportarTabla('contenedorMensual', 'Mensual')">EXCEL</button>
+            <button class="btn btn-p" style="align-self: flex-end;" onclick="cargarMensual()">GENERAR</button>
+            <button class="btn btn-s" style="align-self: flex-end;" onclick="exportarTabla('contenedorMensual', 'Mensual')">EXCEL</button>
         </div>
         <div id="contenedorMensual"></div>
     </div>
 </div>
 
-<div id="modalTerm" class="modal"><div class="modal-content"><h3>Terminal / Comisiones</h3><input type="hidden" id="mCajaId">
-    <div style="margin-bottom:12px;"><label>Empresa:</label><select id="mEmp" style="width:100%;"><option value="PAGO FÁCIL">PAGO FÁCIL</option><option value="SEAC">SEAC</option><option value="COBRO EXPRESS">COBRO EXPRESS</option></select></div>
-    <div style="margin-bottom:12px;"><label>ID / PDV:</label><input type="text" id="mId" style="width:100%;"></div>
-    <div style="margin-bottom:15px;"><label>Comisión % (opcional):</label><input type="number" id="mCom" step="0.01" value="0" style="width:100%;"></div>
-    <div class="btn-group"><button class="btn btn-p" onclick="guardarTerm()">Guardar</button><button class="btn" style="background:#ddd" onclick="document.getElementById('modalTerm').style.display='none'">Cerrar</button></div>
+<div id="modalTerm" class="modal"><div class="modal-content">
+    <h3 id="modalTitle">Terminal / Comisiones</h3>
+    <input type="hidden" id="mTermId">
+    <input type="hidden" id="mCajaId">
+    <div style="margin-bottom:12px;"><label style="font-weight:bold;display:block;margin-bottom:5px;">Empresa:</label>
+        <select id="mEmp" style="width:100%;"><option value="PAGO FÁCIL">PAGO FÁCIL</option><option value="SEAC">SEAC</option><option value="COBRO EXPRESS">COBRO EXPRESS</option></select>
+    </div>
+    <div style="margin-bottom:12px;"><label style="font-weight:bold;display:block;margin-bottom:5px;">ID / PDV:</label>
+        <input type="text" id="mId" style="width:100%;" placeholder="Ej: A12345">
+    </div>
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+        <div style="margin-bottom:15px;"><label style="font-weight:bold;display:block;margin-bottom:5px;">% Comisión Efec:</label>
+            <input type="number" id="mComEfec" step="0.001" value="0" style="width:100%;">
+        </div>
+        <div style="margin-bottom:15px;"><label style="font-weight:bold;display:block;margin-bottom:5px;">$ Fijo Débito:</label>
+            <input type="number" id="mComDeb" step="0.01" value="0" style="width:100%;">
+        </div>
+    </div>
+    <div class="btn-group" style="margin-top:10px;">
+        <button class="btn btn-p" onclick="guardarTerm()">Guardar</button>
+        <button class="btn" style="background:#ddd" onclick="cerrarModal()">Cerrar</button>
+    </div>
 </div></div>
 
 <script>
@@ -170,14 +196,13 @@
             ["seac","pf","ce"].forEach(k => { if(!dataEmp[k].loc[r.suc_nombre]) dataEmp[k].loc[r.suc_nombre] = Array(k==="ce"?10:5).fill(0); });
             dataEmp.seac.loc[r.suc_nombre][0]+=parseFloat(r.seac_cant_e||0); dataEmp.seac.loc[r.suc_nombre][1]+=parseFloat(r.seac_monto_e||0); dataEmp.seac.loc[r.suc_nombre][2]+=parseFloat(r.seac_cant_d||0); dataEmp.seac.loc[r.suc_nombre][3]+=parseFloat(r.seac_monto_d||0); dataEmp.seac.loc[r.suc_nombre][4]+=((parseFloat(r.seac_monto_e||0)+parseFloat(r.seac_monto_d||0)));
             dataEmp.pf.loc[r.suc_nombre][0]+=parseFloat(r.pf_cant_e||0); dataEmp.pf.loc[r.suc_nombre][1]+=parseFloat(r.pf_monto_e||0); dataEmp.pf.loc[r.suc_nombre][2]+=parseFloat(r.pf_cant_d||0); dataEmp.pf.loc[r.suc_nombre][3]+=parseFloat(r.pf_monto_d||0); dataEmp.pf.loc[r.suc_nombre][4]+=((parseFloat(r.pf_monto_e||0)+parseFloat(r.pf_monto_d||0)));
-            const mEf = parseFloat(r.ce_monto_e||0), mDe = parseFloat(r.ce_monto_d||0), dev = parseFloat(r.ce_dev||0), exEf = parseFloat(r.ce_extra_e||0), exDe = parseFloat(r.ce_extra_d||0);
-            const subCE = (mEf + mDe - exEf - exDe - dev);
-            dataEmp.ce.loc[r.suc_nombre][0]+=parseFloat(r.ce_cant_e||0); dataEmp.ce.loc[r.suc_nombre][1]+=mEf; dataEmp.ce.loc[r.suc_nombre][2]+=dev; dataEmp.ce.loc[r.suc_nombre][3]+=(mEf-dev); dataEmp.ce.loc[r.suc_nombre][4]+=exEf; dataEmp.ce.loc[r.suc_nombre][5]+=parseFloat(r.ce_cant_d||0); dataEmp.ce.loc[r.suc_nombre][6]+=mDe; dataEmp.ce.loc[r.suc_nombre][7]+=exDe; dataEmp.ce.loc[r.suc_nombre][8]+=(parseFloat(r.ce_cant_e||0)+parseFloat(r.ce_cant_d||0)); dataEmp.ce.loc[r.suc_nombre][9]+=subCE;
+            const mEf = parseFloat(r.ce_monto_e||0), mDe = parseFloat(r.ce_monto_d||0), dev = parseFloat(r.ce_dev||0);
+            dataEmp.ce.loc[r.suc_nombre][0]+=parseFloat(r.ce_cant_e||0); dataEmp.ce.loc[r.suc_nombre][1]+=mEf; dataEmp.ce.loc[r.suc_nombre][2]+=dev; dataEmp.ce.loc[r.suc_nombre][3]+=(mEf-dev); dataEmp.ce.loc[r.suc_nombre][4]+=parseFloat(r.ce_extra_e||0); dataEmp.ce.loc[r.suc_nombre][5]+=parseFloat(r.ce_cant_d||0); dataEmp.ce.loc[r.suc_nombre][6]+=mDe; dataEmp.ce.loc[r.suc_nombre][7]+=parseFloat(r.ce_extra_d||0); dataEmp.ce.loc[r.suc_nombre][8]+=(parseFloat(r.ce_cant_e||0)+parseFloat(r.ce_cant_d||0)); dataEmp.ce.loc[r.suc_nombre][9]+=(mEf+mDe-parseFloat(r.ce_extra_e||0)-parseFloat(r.ce_extra_d||0)-dev);
         });
         for (let k in dataEmp) {
             const e = dataEmp[k];
-            let h = `<div class="bloque-empresa"><div class="bloque-title ${e.cl}">${e.title}</div><table class="tabla-inf"><thead><tr><th>LOCAL</th><th>CANT. EFEC.</th><th>MONTO EFEC.</th>${k==='ce'?'<th>DEV.</th><th>EFEC-DEV</th><th>EXT. EFEC.</th>':''}<th>CANT. DÉB.</th><th>MONTO DÉB.</th>${k==='ce'?'<th>EXT. DÉB.</th><th>CANT. TOTAL</th>':''}<th>SUBTOTAL</th></tr></thead><tbody>`;
-            for (let l in e.loc) { h += `<tr><td style="text-align:left; font-weight:bold">${l}</td>`; e.loc[l].forEach((v,i)=> h += `<td>${([0,2,5,8].includes(i)&&(k==='ce')||[0,2].includes(i)&&k!=='ce') ? parseInt(v) : fmt(v)}</td>`); h += `</tr>`; }
+            let h = `<div class="bloque-empresa"><div class="bloque-title ${e.cl}">${e.title} - TOTALES ACUMULADOS</div><table class="tabla-inf"><thead><tr><th>NOMBRE LOCAL</th><th class="border-left-group">CANTIDAD<br>EFECTIVO</th><th>MONTO<br>EFECTIVO</th>${k==='ce'?'<th>DEVOLUCIONES<br>RESUMIDO</th><th>EFECTIVO MENOS<br>DEVOLUCIONES</th><th>EXTRA SERVICIO<br>EFECTIVO</th>':''}<th>CANTIDAD<br>DÉBITO</th><th>MONTO<br>DÉBITO</th>${k==='ce'?'<th>EXTRA SERVICIO<br>DÉBITO</th><th>CANTIDAD<br>TOTAL</th>':''}<th class="border-right-group">SUBTOTAL<br>FINAL</th></tr></thead><tbody>`;
+            for (let l in e.loc) { h += `<tr><td style="text-align:left; font-weight:bold">${l}</td>`; e.loc[l].forEach((v,i)=> h += `<td class="${i===0?'border-left-group':i===e.loc[l].length-1?'border-right-group':''}">${([0,2,5,8].includes(i)&&(k==='ce')||[0,2].includes(i)&&k!=='ce') ? parseInt(v) : fmt(v)}</td>`); h += `</tr>`; }
             cont.innerHTML += h + `</tbody></table></div>`;
         }
     }
@@ -188,11 +213,11 @@
         const cont = document.getElementById('contenedorInformes'); cont.innerHTML = '';
         const sucs = {}; res.forEach(r => { if(filtro!=="TODAS" && r.suc_nombre!==filtro) return; if(!sucs[r.suc_nombre]) sucs[r.suc_nombre]=[]; sucs[r.suc_nombre].push(r); });
         for (let s in sucs) {
-            let h = `<div class="bloque-empresa"><div class="bloque-title" style="background:#334155">LOCAL: ${s}</div><table class="tabla-inf"><thead><tr><th rowspan="2">FECHA</th><th rowspan="2">CAJA</th><th colspan="4" class="th-principal">PAGO FÁCIL</th><th colspan="4" class="th-principal">SEAC</th><th colspan="8" class="th-principal">COBRO EXPRESS</th><th rowspan="2">TOTAL</th></tr><tr><th>CANT.EF</th><th>MONTO.EF</th><th>CANT.DB</th><th class="border-right-group">MONTO.DB</th><th>CANT.EF</th><th>MONTO.EF</th><th>CANT.DB</th><th class="border-right-group">MONTO.DB</th><th>CANT.EF</th><th>MONTO.EF</th><th>DEV.</th><th>EFEC-DEV</th><th>EXT.EF</th><th>CANT.DB</th><th>MONTO.DB</th><th class="border-right-group">EXT.DB</th></tr></thead><tbody>`;
+            let h = `<div class="bloque-empresa"><div class="bloque-title" style="background:#334155">LOCAL: ${s}</div><table class="tabla-inf"><thead><tr><th rowspan="2">FECHA<br>COBRO</th><th rowspan="2">NOMBRE<br>CAJA</th><th colspan="4" class="th-principal border-left-group border-right-group">PAGO FÁCIL</th><th colspan="4" class="th-principal border-right-group">SEAC</th><th colspan="8" class="th-principal border-right-group">COBRO EXPRESS</th><th rowspan="2">SUBTOTAL<br>CAJA</th></tr><tr><th class="border-left-group">CANTIDAD<br>EFECTIVO</th><th>MONTO<br>EFECTIVO</th><th>CANTIDAD<br>DÉBITO</th><th class="border-right-group">MONTO<br>DÉBITO</th><th>CANTIDAD<br>EFECTIVO</th><th>MONTO<br>EFECTIVO</th><th>CANTIDAD<br>DÉBITO</th><th class="border-right-group">MONTO<br>DÉBITO</th><th>CANTIDAD<br>EFECTIVO</th><th>MONTO<br>EFECTIVO</th><th>DEV.</th><th>EFECTIVO -<br>DEVOLUCIONES</th><th>EXTRA<br>EFECTIVO</th><th>CANTIDAD<br>DÉBITO</th><th>MONTO<br>DÉBITO</th><th class="border-right-group">EXTRA<br>DÉBITO</th></tr></thead><tbody>`;
             sucs[s].forEach(r => {
-                const subCE = (cleanImport(r.ce_monto_e)+cleanImport(r.ce_monto_d)-cleanImport(r.ce_extra_e)-cleanImport(r.ce_extra_d)-cleanImport(r.ce_dev));
-                const total = (cleanImport(r.pf_monto_e)+cleanImport(r.pf_monto_d)) + (cleanImport(r.seac_monto_e)+cleanImport(r.seac_monto_d)) + subCE;
-                h += `<tr><td>${new Date(r.fecha).toLocaleDateString()}</td><td>${r.nombre_caja}</td><td class="border-left-group">${parseInt(r.pf_cant_e)}</td><td>${fmt(r.pf_monto_e)}</td><td>${parseInt(r.pf_cant_d)}</td><td class="border-right-group">${fmt(r.pf_monto_d)}</td><td>${parseInt(r.seac_cant_e)}</td><td>${fmt(r.seac_monto_e)}</td><td>${parseInt(r.seac_cant_d)}</td><td class="border-right-group">${fmt(r.seac_monto_d)}</td><td>${parseInt(r.ce_cant_e)}</td><td>${fmt(r.ce_monto_e)}</td><td style="color:red">${fmt(r.ce_dev)}</td><td style="font-weight:bold">${fmt(r.ce_monto_e-r.ce_dev)}</td><td>${fmt(r.ce_extra_e)}</td><td>${parseInt(r.ce_cant_d)}</td><td>${fmt(r.ce_monto_d)}</td><td class="border-right-group">${fmt(r.ce_extra_d)}</td><td style="font-weight:bold">${fmt(total)}</td></tr>`;
+                const subCE = (parseFloat(r.ce_monto_e)+parseFloat(r.ce_monto_d)-parseFloat(r.ce_extra_e)-parseFloat(r.ce_extra_d)-parseFloat(r.ce_dev));
+                const total = (parseFloat(r.pf_monto_e)+parseFloat(r.pf_monto_d)) + (parseFloat(r.seac_monto_e)+parseFloat(r.seac_monto_d)) + subCE;
+                h += `<tr><td>${new Date(r.fecha).toLocaleDateString()}</td><td>${r.nombre_caja}</td><td class="border-left-group">${parseInt(r.pf_cant_e)}</td><td>${fmt(r.pf_monto_e)}</td><td>${parseInt(r.pf_cant_d)}</td><td class="border-right-group">${fmt(r.pf_monto_d)}</td><td>${parseInt(r.seac_cant_e)}</td><td>${fmt(r.seac_monto_e)}</td><td>${parseInt(r.seac_cant_d)}</td><td class="border-right-group">${fmt(r.seac_monto_d)}</td><td>${parseInt(r.ce_cant_e)}</td><td>${fmt(r.ce_monto_e)}</td><td style="color:red">${fmt(r.ce_dev)}</td><td style="font-weight:bold">${fmt(parseFloat(r.ce_monto_e)-parseFloat(r.ce_dev))}</td><td>${fmt(r.ce_extra_e)}</td><td>${parseInt(r.ce_cant_d)}</td><td>${fmt(r.ce_monto_d)}</td><td class="border-right-group">${fmt(r.ce_extra_d)}</td><td style="font-weight:bold">${fmt(total)}</td></tr>`;
             });
             cont.innerHTML += h + `</tbody></table></div>`;
         }
@@ -203,7 +228,10 @@
         const grid = document.getElementById('grid-arbol'); grid.innerHTML = ''; const sucs = {};
         const selD = document.getElementById('selSucDiario'); selD.innerHTML = '<option value="TODAS">TODAS</option>';
         data.forEach(r => {
-            if (!sucs[r.suc_id]) { sucs[r.suc_id] = { id: r.suc_id, nombre: r.suc_nombre, cajas: {} }; selD.innerHTML += `<option value="${r.suc_nombre}">${r.suc_nombre}</option>`; }
+            if (!sucs[r.suc_id]) { 
+                sucs[r.suc_id] = { id: r.suc_id, nombre: r.suc_nombre, cajas: {} }; 
+                selD.innerHTML += `<option value="${r.suc_nombre}">${r.suc_nombre}</option>`; 
+            }
             if (r.caja_id && !sucs[r.suc_id].cajas[r.caja_id]) sucs[r.suc_id].cajas[r.caja_id] = { id: r.caja_id, nombre: r.nombre_caja, terms: [] };
             if (r.term_id) sucs[r.suc_id].cajas[r.caja_id].terms.push(r);
         });
@@ -212,7 +240,7 @@
             let h = `<div class="card-upload"><div style="display:flex; justify-content:space-between; align-items:center; border-bottom:2px solid #eee; padding-bottom:5px; margin-bottom:10px;"><strong>🏛️ ${s.nombre}</strong><div><button class="icon-btn" onclick="editN('sucursales',${s.id},'${s.nombre}')">✏️</button><button class="icon-btn" onclick="nuevaCaja(${s.id})">➕</button><button class="icon-btn" onclick="borrar('sucursales',${s.id})">🗑️</button></div></div>`;
             for (let cid in s.cajas) {
                 const c = s.cajas[cid]; h += `<div style="padding:8px; background:#f8fafc; border-radius:8px; margin-bottom:5px; display:flex; justify-content:space-between; align-items:center;"><span>📦 <b>Caja:</b> ${c.nombre}</span><div><button class="icon-btn" onclick="abrirModal(${c.id})">➕</button><button class="icon-btn" onclick="editN('cajas',${c.id},'${c.nombre}')">✏️</button><button class="icon-btn" onclick="borrar('cajas',${c.id})">🗑️</button></div></div>`;
-                c.terms.forEach(t => { h += `<div style="padding:5px 10px 5px 30px; font-size:12px; display:flex; justify-content:space-between;"><span>💻 ${t.empresa}: ${t.identificador_externo} (${t.comision_porcentaje}%)</span><button class="icon-btn" style="font-size:12px;" onclick="borrar('terminales',${t.term_id})">🗑️</button></div>`; });
+                c.terms.forEach(t => { h += `<div style="padding:5px 10px; font-size:12px; display:flex; justify-content:space-between; border-left: 2px solid #ddd; margin-left: 20px;"><span>💻 ${t.empresa}: <b>${t.identificador_externo}</b><br><small>Efec: ${t.comision_porcentaje_efectivo}% | Déb: $${t.comision_fija_debito}</small></span><div><button class="icon-btn" style="font-size:12px;" onclick="editarTerm(${JSON.stringify(t).replace(/"/g, '&quot;')})">✏️</button><button class="icon-btn" style="font-size:12px;" onclick="borrar('terminales',${t.term_id})">🗑️</button></div></div>`; });
             }
             grid.innerHTML += h + `</div>`;
         }
@@ -226,17 +254,55 @@
         document.getElementById('mHasta').value = document.getElementById('fHasta').value;
         cargarArbol(); 
     }
-    function switchTab(e, id) { document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active')); document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active')); document.getElementById(id).classList.add('active'); e.target.classList.add('active'); if(id === 'tab-config') cargarArbol(); }
+    
+    function switchTab(e, id) { 
+        document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active')); 
+        document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active')); 
+        document.getElementById(id).classList.add('active'); e.target.classList.add('active'); 
+        if(id === 'tab-config') cargarArbol(); 
+    }
+    
     async function editN(t,id,a) { const n = prompt("Editar nombre:",a); if(n) { await fetch(`/api/${t}/${id}`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({nombre:n})}); cargarArbol(); } }
     async function borrar(t,id) { if(confirm("¿Eliminar?")) { await fetch(`/api/${t}/${id}`,{method:'DELETE'}); cargarArbol(); } }
     async function nuevaCaja(sid) { const n = prompt("Nombre caja:"); if(n) { await fetch('/api/cajas',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sucursal_id:sid, nombre:n})}); cargarArbol(); } }
     async function nuevaSucursal() { const n = prompt("Nombre sucursal:"); if(n) { await fetch('/api/sucursales',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({nombre:n})}); cargarArbol(); } }
-    function abrirModal(cid) { document.getElementById('mCajaId').value = cid; document.getElementById('modalTerm').style.display = 'flex'; }
+    
+    function abrirModal(cid) { 
+        document.getElementById('modalTitle').innerText = "Nueva Terminal";
+        document.getElementById('mCajaId').value = cid; 
+        document.getElementById('mTermId').value = "";
+        document.getElementById('mId').value = "";
+        document.getElementById('mComEfec').value = 0;
+        document.getElementById('mComDeb').value = 0;
+        document.getElementById('modalTerm').style.display = 'flex'; 
+    }
+
+    function editarTerm(t) {
+        document.getElementById('modalTitle').innerText = "Editar Terminal";
+        document.getElementById('mTermId').value = t.term_id;
+        document.getElementById('mEmp').value = t.empresa;
+        document.getElementById('mId').value = t.identificador_externo;
+        document.getElementById('mComEfec').value = t.comision_porcentaje_efectivo;
+        document.getElementById('mComDeb').value = t.comision_fija_debito;
+        document.getElementById('modalTerm').style.display = 'flex';
+    }
+
+    function cerrarModal() { document.getElementById('modalTerm').style.display = 'none'; }
+
     async function guardarTerm() { 
-        const b = { caja_id: document.getElementById('mCajaId').value, empresa: document.getElementById('mEmp').value, identificador: document.getElementById('mId').value, comision: document.getElementById('mCom').value }; 
+        const id = document.getElementById('mTermId').value;
+        const b = { 
+            caja_id: document.getElementById('mCajaId').value, 
+            empresa: document.getElementById('mEmp').value, 
+            identificador: document.getElementById('mId').value, 
+            com_efectivo: document.getElementById('mComEfec').value, 
+            com_debito: document.getElementById('mComDeb').value 
+        }; 
         if(!b.identificador) return alert("ID requerido");
-        await fetch('/api/terminales', { method: 'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(b) }); 
-        document.getElementById('modalTerm').style.display = 'none'; document.getElementById('mId').value=""; cargarArbol(); 
+        const url = id ? `/api/terminales/${id}` : '/api/terminales';
+        const method = id ? 'PUT' : 'POST';
+        await fetch(url, { method, headers:{'Content-Type':'application/json'}, body:JSON.stringify(b) }); 
+        cerrarModal(); cargarArbol(); 
     }
 </script>
 </body>
