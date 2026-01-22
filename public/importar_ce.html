@@ -1,0 +1,123 @@
+<div style="padding: 20px;">
+    <button class="btn" onclick="loadSection('importar')" 
+            style="margin-bottom:25px; background: #fff; color: var(--color-principal); border: 1.5px solid var(--color-principal); display: flex; align-items: center; gap: 8px; padding: 8px 18px; border-radius: 8px; cursor: pointer;">
+        <span style="font-size: 18px;">←</span> <span style="font-weight: 700;">VOLVER AL SELECTOR</span>
+    </button>
+    
+    <div style="display: flex; align-items: center; gap: 15px; margin-bottom: 20px;">
+        <span style="font-size: 30px;">🟠</span>
+        <h2 style="font-weight: 900; color: #f59e0b; margin: 0; letter-spacing: -0.01em;">Importador COBRO EXPRESS</h2>
+    </div>
+
+    <div class="card-upload" style="border-top: 5px solid #f59e0b; background: #fff; padding: 25px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.05);">
+        <p style="font-weight: 700; color: #475569; margin-bottom: 10px;">1. Seleccione archivos Excel de Cobro Express:</p>
+        
+        <label for="fileCE" style="display: block; padding: 20px; border: 2px dashed #f59e0b; border-radius: 10px; text-align: center; cursor: pointer; background: #fff7ed; margin-bottom: 20px; transition: 0.3s;" onmouseover="this.style.background='#ffedd5'" onmouseout="this.style.background='#fff7ed'">
+            <span style="font-size: 24px; display: block; margin-bottom: 5px;">📂</span>
+            <span style="font-weight: 600; color: #9a3412;">Click para buscar archivos Excel (.xlsx / .xls)</span>
+            <input type="file" id="fileCE" multiple accept=".xlsx, .xls" style="display: none;" onchange="document.getElementById('file-name-ce').innerText = this.files.length + ' archivos seleccionados'">
+        </label>
+        <p id="file-name-ce" style="font-size: 13px; color: #64748b; text-align: center; margin-top: -15px; margin-bottom: 15px;"></p>
+        
+        <p style="font-weight: 700; color: #475569; margin-top: 20px;">2. Ejecutar procesamiento:</p>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+            <button class="btn" onclick="procesarCE('diario')" style="background: #334155; height: 50px; font-size: 15px; border-radius: 10px; font-weight: 800; color: white;">1. PROCESAR DIARIO (BASE)</button>
+            <button class="btn" onclick="procesarCE('detallado')" style="background: #f59e0b; height: 50px; font-size: 15px; border-radius: 10px; font-weight: 800; color: white;">2. PROCESAR DETALLE (CANTIDADES)</button>
+        </div>
+
+        <div id="progreso-ce" style="display:none; margin-top: 25px;">
+            <div style="height: 12px; background: #e2e8f0; border-radius: 10px; overflow: hidden;">
+                <div id="barra-ce" style="width: 0%; height: 100%; background: #f59e0b; transition: width 0.3s;"></div>
+            </div>
+            <p id="txt-proceso-ce" style="font-size: 13px; font-weight: 700; margin-top: 8px; color: #64748b; text-align: center;"></p>
+        </div>
+
+        <div id="res-ce" style="margin-top: 25px;"></div>
+        
+        <div id="log-container-ce" style="display:none; margin-top: 25px;">
+            <h4 style="color: #334155; font-size: 14px; border-bottom: 2px solid #e2e8f0; padding-bottom: 8px; font-weight: 900;">AUDITORÍA DETALLADA COBRO EXPRESS:</h4>
+            <div id="log-list-ce" style="max-height: 250px; overflow-y: auto; background: #111827; color: #fbbf24; padding: 15px; border-radius: 8px; font-family: 'Courier New', monospace; font-size: 12px; line-height: 1.6; border: 1px solid #374151;">
+            </div>
+        </div>
+    </div>
+    </div>
+
+<script>
+    // SECCION PROHIBIDO TOCAR - INICIO
+    async function procesarCE(tipo) {
+        const input = document.getElementById('fileCE');
+        const resDiv = document.getElementById('res-ce');
+        const logList = document.getElementById('log-list-ce');
+        const logCont = document.getElementById('log-container-ce');
+        const barra = document.getElementById('barra-ce');
+        const progDiv = document.getElementById('progreso-ce');
+        
+        if (!input.files.length) {
+            if (typeof customAlert === 'function') customAlert('Por favor, seleccioná archivos de Cobro Express.');
+            else alert('Por favor, seleccioná archivos de Cobro Express.');
+            return;
+        }
+
+        resDiv.innerHTML = "";
+        logList.innerHTML = "";
+        logCont.style.display = "block";
+        progDiv.style.display = "block";
+
+        let totN = 0, totE = 0, totD = 0;
+
+        for (let i = 0; i < input.files.length; i++) {
+            const file = input.files[i];
+            const p = Math.round(((i + 1) / input.files.length) * 100);
+            barra.style.width = p + "%";
+            document.getElementById('txt-proceso-ce').innerText = `Analizando ${tipo.toUpperCase()}: ${file.name}`;
+            addLogCE(`> Leyendo: ${file.name}`, '#94a3b8');
+
+            const fd = new FormData();
+            fd.append('archivo', file);
+            fd.append('tipo', tipo);
+
+            try {
+                const response = await fetch('/importar/cobroexpress', { method: 'POST', body: fd });
+                const data = await response.json();
+                
+                if (data.detalles) {
+                    data.detalles.forEach(d => {
+                        let color = '#fbbf24'; 
+                        if(d.status === 'OK') color = '#34d399'; 
+                        if(d.status === 'ERROR') color = '#f87171'; 
+                        if(d.status === 'DUPLICADO') color = '#60a5fa'; 
+                        addLogCE(`[${d.status}] Boca: ${d.pdv || '---'} | ${d.msg} | $${d.monto || 0}`, color);
+                    });
+                }
+                totN += data.nuevos;
+                totE += data.errores;
+                totD += data.omitidos;
+            } catch (err) {
+                addLogCE(`[ERROR RED]: Error de conexión.`, '#f87171');
+                totE++;
+            }
+        }
+
+        progDiv.style.display = "none";
+        resDiv.innerHTML = `
+            <div style="padding:20px; background:#fff7ed; border:2px solid #fed7aa; border-radius:12px;">
+                <h4 style="margin:0 0 10px 0; color:#9a3412; font-weight:900; font-size:16px;">RESUMEN FINAL COBRO EXPRESS:</h4>
+                <div style="display:grid; grid-template-columns: 1fr 1fr 1fr; gap:10px; text-align:center;">
+                    <div style="background:white; padding:10px; border-radius:8px; border:1px solid #fed7aa;"><span style="display:block; font-size:10px; color:#64748b;">NUEVOS/ACT.</span><b style="font-size:18px; color:#f59e0b;">${totN}</b></div>
+                    <div style="background:white; padding:10px; border-radius:8px; border:1px solid #fed7aa;"><span style="display:block; font-size:10px; color:#64748b;">DUPLICADOS</span><b style="font-size:18px; color:#60a5fa;">${totD}</b></div>
+                    <div style="background:white; padding:10px; border-radius:8px; border:1px solid #fed7aa;"><span style="display:block; font-size:10px; color:#64748b;">ERRORES</span><b style="font-size:18px; color:#ef4444;">${totE}</b></div>
+                </div>
+            </div>`;
+        input.value = "";
+    }
+
+    function addLogCE(txt, color) {
+        const div = document.createElement('div');
+        div.style.color = color;
+        div.style.marginBottom = "4px";
+        div.innerText = txt;
+        document.getElementById('log-list-ce').appendChild(div);
+        document.getElementById('log-list-ce').scrollTop = document.getElementById('log-list-ce').scrollHeight;
+    }
+    // // SECCION PROHIBIDO TOCAR - FIN.
+</script>

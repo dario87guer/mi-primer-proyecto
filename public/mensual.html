@@ -1,0 +1,94 @@
+<div style="padding: 20px;">
+    <h2 style="font-weight: 900; color: var(--color-principal-dark);">Informe Mensual Consolidado</h2>
+    <div class="controls-row">
+        <div class="control-item"><label>Desde</label><input type="date" id="mDesde"></div>
+        <div class="control-item"><label>Hasta</label><input type="date" id="mHasta"></div>
+        <button class="btn" onclick="cargarMensual()">GENERAR MENSUAL</button>
+        <button class="btn btn-s" onclick="exportarTabla('contenedorMensual', 'Mensual')">EXCEL</button>
+    </div>
+    <div id="contenedorMensual"></div>
+</div>
+
+<script>
+    async function cargarMensual() {
+        const desde = document.getElementById('mDesde').value;
+        const hasta = document.getElementById('mHasta').value;
+        const cont = document.getElementById('contenedorMensual');
+        cont.innerHTML = '<h3>Cargando datos...</h3>';
+        
+        try {
+            const res = await (await fetch(`/api/informes?desde=${desde}&hasta=${hasta}`)).json();
+            cont.innerHTML = '';
+            
+            const dataEmp = { 
+                "pf": { title: "PAGO FÁCIL", loc: {} }, 
+                "seac": { title: "SEAC", loc: {} }, 
+                "ce": { title: "COBRO EXPRESS", loc: {} } 
+            };
+            
+            res.forEach(r => {
+                ["pf","seac","ce"].forEach(k => { 
+                    if(!dataEmp[k].loc[r.suc_nombre]) dataEmp[k].loc[r.suc_nombre] = Array(k==="ce"?10:5).fill(0); 
+                });
+                
+                // Acumuladores PF
+                dataEmp.pf.loc[r.suc_nombre][0]+=parseFloat(r.pf_cant_e||0);
+                dataEmp.pf.loc[r.suc_nombre][1]+=parseFloat(r.pf_monto_e||0);
+                dataEmp.pf.loc[r.suc_nombre][2]+=parseFloat(r.pf_cant_d||0);
+                dataEmp.pf.loc[r.suc_nombre][3]+=parseFloat(r.pf_monto_d||0);
+                dataEmp.pf.loc[r.suc_nombre][4]+=(parseFloat(r.pf_monto_e||0)+parseFloat(r.pf_monto_d||0));
+                
+                // Acumuladores SEAC
+                dataEmp.seac.loc[r.suc_nombre][0]+=parseFloat(r.seac_cant_e||0);
+                dataEmp.seac.loc[r.suc_nombre][1]+=parseFloat(r.seac_monto_e||0);
+                dataEmp.seac.loc[r.suc_nombre][2]+=parseFloat(r.seac_cant_d||0);
+                dataEmp.seac.loc[r.suc_nombre][3]+=parseFloat(r.seac_monto_d||0);
+                dataEmp.seac.loc[r.suc_nombre][4]+=(parseFloat(r.seac_monto_e||0)+parseFloat(r.seac_monto_d||0));
+
+                // Acumuladores CE
+                const mEf = parseFloat(r.ce_monto_e||0), mDe = parseFloat(r.ce_monto_d||0), dev = parseFloat(r.ce_dev||0);
+                dataEmp.ce.loc[r.suc_nombre][0]+=parseFloat(r.ce_cant_e||0);
+                dataEmp.ce.loc[r.suc_nombre][1]+=mEf;
+                dataEmp.ce.loc[r.suc_nombre][2]+=dev;
+                dataEmp.ce.loc[r.suc_nombre][3]+=(mEf-dev);
+                dataEmp.ce.loc[r.suc_nombre][4]+=parseFloat(r.ce_extra_e||0);
+                dataEmp.ce.loc[r.suc_nombre][5]+=parseFloat(r.ce_cant_d||0);
+                dataEmp.ce.loc[r.suc_nombre][6]+=mDe;
+                dataEmp.ce.loc[r.suc_nombre][7]+=parseFloat(r.ce_extra_d||0);
+                dataEmp.ce.loc[r.suc_nombre][8]+=(parseFloat(r.ce_cant_e||0)+parseFloat(r.ce_cant_d||0));
+                dataEmp.ce.loc[r.suc_nombre][9]+=(mEf+mDe-dev);
+            });
+
+            for (let k in dataEmp) {
+                const e = dataEmp[k];
+                let h = `<div class="bloque-empresa">
+                    <table class="tabla-inf">
+                        <thead>
+                            <tr class="local-title-row"><th colspan="${k==='ce'?11:6}">${e.title} - ACUMULADO MENSUAL</th></tr>
+                            <tr>
+                                <th>LOCAL</th>
+                                <th class="border-left-group">CANT.E</th>
+                                <th>MONTO.E</th>
+                                ${k==='ce'?'<th>DEV</th><th>EF-DEV</th><th>EXT.E</th>':''}
+                                <th>CANT.D</th>
+                                <th>MONTO.D</th>
+                                ${k==='ce'?'<th>EXT.D</th><th>CANT.TOT</th>':''}
+                                <th class="border-right-group">SUBTOTAL</th>
+                            </tr>
+                        </thead>
+                        <tbody>`;
+                for (let l in e.loc) { 
+                    h += `<tr><td style="text-align:left; font-weight:bold">${l}</td>`; 
+                    e.loc[l].forEach((v,i)=> {
+                        const esMonto = !([0,2,5,8].includes(i));
+                        h += `<td class="${i===0?'border-left-group':i===e.loc[l].length-1?'border-right-group':''}">${esMonto ? fmt(v) : parseInt(v)}</td>`;
+                    }); 
+                    h += `</tr>`; 
+                }
+                cont.innerHTML += h + `</tbody></table></div>`;
+            }
+        } catch (err) {
+            cont.innerHTML = '<h2>Error al generar el informe mensual.</h2>';
+        }
+    }
+</script>

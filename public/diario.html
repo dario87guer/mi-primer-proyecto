@@ -1,0 +1,41 @@
+<div style="padding: 20px;">
+    <h2 style="font-weight: 900; color: var(--color-principal-dark);">Informe Diario</h2>
+    <div class="controls-row" style="display:flex; gap:10px; margin-bottom:20px; flex-wrap:wrap;">
+        <input type="date" id="fDesde" class="btn" style="background:white; color:black; border:1px solid #ccc;">
+        <input type="date" id="fHasta" class="btn" style="background:white; color:black; border:1px solid #ccc;">
+        <button class="btn" onclick="cargarInforme()">Consultar</button>
+    </div>
+    <div id="contenedorInformes" style="overflow-x:auto;"></div>
+</div>
+
+<style>
+    .tabla-inf { width: 100%; border-collapse: collapse; font-size: 11px; margin-bottom: 30px; }
+    .tabla-inf th, .tabla-inf td { border: 1px solid #d1d5db; padding: 6px; text-align: center; }
+    .tabla-inf th { background: #f1f5f9; font-weight: 800; }
+    .border-left-group { border-left: 3px solid #10b981 !important; }
+    .border-right-group { border-right: 3px solid #10b981 !important; }
+    .row-totales { background: #e0f2fe; font-weight: bold; }
+</style>
+
+<script>
+    async function cargarInforme() {
+        const d = document.getElementById('fDesde').value;
+        const h = document.getElementById('fHasta').value;
+        const res = await (await fetch(`/api/informes?desde=${d}&hasta=${h}`)).json();
+        const cont = document.getElementById('contenedorInformes');
+        cont.innerHTML = '<table class="tabla-inf"><thead><tr><th>Fecha</th><th>Local</th><th>Caja</th><th class="border-left-group">PF Monto</th><th class="border-right-group">SEAC Monto</th><th>CE Monto</th><th>Total</th></tr></thead><tbody id="body-inf"></tbody></table>';
+        const body = document.getElementById('body-inf');
+        res.forEach(r => {
+            const total = parseFloat(r.pf_monto_e) + parseFloat(r.seac_monto_e) + parseFloat(r.ce_monto_e);
+            body.innerHTML += `<tr>
+                <td>${new Date(r.fecha).toLocaleDateString()}</td>
+                <td>${r.suc_nombre}</td>
+                <td>${r.nombre_caja}</td>
+                <td class="border-left-group">$ ${r.pf_monto_e}</td>
+                <td class="border-right-group">$ ${r.seac_monto_e}</td>
+                <td>$ ${r.ce_monto_e}</td>
+                <td style="font-weight:900">$ ${total.toFixed(2)}</td>
+            </tr>`;
+        });
+    }
+</script>

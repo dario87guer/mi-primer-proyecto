@@ -1,0 +1,74 @@
+<div style="padding: 30px;">
+    <h2 style="font-weight: 900; color: var(--color-principal-dark); margin-bottom: 25px; letter-spacing: -0.02em;">
+        Seleccione Empresa para Importar
+    </h2>
+    
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px;">
+        
+        <div class="card-menu" onclick="loadSection('importar_pf')">
+            <span>🔵</span>
+            <h3>PAGO FÁCIL</h3>
+            <p style="font-size: 13px; color: #64748b;">Importación de archivos .TXT</p>
+            <div id="date-pf" style="margin-top:15px; font-size:11px; font-weight:800; color:var(--color-principal);">Última carga: Consultando...</div>
+        </div>
+
+        <div class="card-menu" onclick="loadSection('importar_seac')">
+            <span>🟢</span>
+            <h3>SEAC</h3>
+            <p style="font-size: 13px; color: #64748b;">Excel de Ventas y Débitos</p>
+            <div id="date-seac" style="margin-top:15px; font-size:11px; font-weight:800; color:var(--color-principal);">Última carga: Consultando...</div>
+        </div>
+
+        <div class="card-menu" onclick="loadSection('importar_ce')">
+            <span>🟠</span>
+            <h3>COBRO EXPRESS</h3>
+            <p style="font-size: 13px; color: #64748b; margin-bottom: 12px;">Detalle y Diario de operaciones</p>
+            <div style="display: flex; flex-direction: column; gap: 5px; align-items: center;">
+                <div id="date-ce-diario" style="font-size:10px; font-weight:800; color:#334155; background: #f1f5f9; padding: 5px 12px; border-radius: 6px; width: 90%; text-align: center;">
+                    Última subida archivo diario: Consultando...
+                </div>
+                <div id="date-ce-detalle" style="font-size:10px; font-weight:800; color:#f59e0b; background: #fffbeb; padding: 5px 12px; border-radius: 6px; width: 90%; text-align: center;">
+                    Última subida archivo detallado: Consultando...
+                </div>
+            </div>
+        </div>
+        </div>
+</div>
+
+<script>
+    // SECCION PROHIBIDO TOCAR - INICIO
+    async function actualizarFechasCards() {
+        try {
+            const res = await fetch('/api/ultimas-fechas');
+            const data = await res.json();
+            
+            const map = { "PAGO FÁCIL": "date-pf", "SEAC": "date-seac" };
+            
+            data.forEach(d => {
+                if (d.empresa === "COBRO EXPRESS") {
+                    const fDiario = d.ultima_fecha_diario ? formatearFecha(d.ultima_fecha_diario) : "Sin datos";
+                    const fDetalle = d.ultima_fecha_detalle ? formatearFecha(d.ultima_fecha_detalle) : "Sin datos";
+                    
+                    document.getElementById('date-ce-diario').innerText = `Última subida archivo diario: ${fDiario}`;
+                    document.getElementById('date-ce-detalle').innerText = `Última subida archivo detallado: ${fDetalle}`;
+                } else if (map[d.empresa]) {
+                    const el = document.getElementById(map[d.empresa]);
+                    el.innerText = `Última carga: ${formatearFecha(d.ultima_fecha)}`;
+                }
+            });
+        } catch(e) { console.error("Error al cargar fechas", e); }
+    }
+
+    function formatearFecha(fechaStr) {
+        if(!fechaStr) return "---";
+        const f = new Date(fechaStr);
+        // Ajuste de zona horaria para evitar desfase de un día
+        const d = f.getUTCDate().toString().padStart(2,'0');
+        const m = (f.getUTCMonth()+1).toString().padStart(2,'0');
+        const y = f.getUTCFullYear();
+        return `${d}/${m}/${y}`;
+    }
+
+    actualizarFechasCards();
+    // // SECCION PROHIBIDO TOCAR - FIN.
+</script>

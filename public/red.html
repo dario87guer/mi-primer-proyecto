@@ -1,0 +1,48 @@
+<div style="padding: 20px;">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 25px;">
+        <h2 style="font-weight: 900; color: var(--color-principal-dark);">Red y Comisiones</h2>
+        <button class="btn" onclick="nuevaSucursal()">+ Nueva Sucursal</button>
+    </div>
+    <div id="grid-arbol"></div>
+</div>
+
+<style>
+    .sucursal-card { background: #fff; border-radius: 12px; padding: 20px; margin-bottom: 20px; border-left: 8px solid var(--color-principal); box-shadow: var(--color-shadow); }
+    .sucursal-header { display: flex; justify-content: space-between; align-items: center; font-weight: 900; font-size: 18px; margin-bottom: 15px; }
+    .caja-card { background: #f8fafc; padding: 12px; border-radius: 8px; margin: 10px 0; border: 1px solid #e2e8f0; display: flex; justify-content: space-between; }
+    .term-item { padding: 8px 12px; font-size: 14px; border-bottom: 1px solid #edf2f7; display: flex; justify-content: space-between; align-items: center; }
+    .icon-btn { background: #e2e8f0; border: none; cursor: pointer; padding: 5px 8px; border-radius: 6px; margin-left: 4px; }
+</style>
+
+<script>
+    async function cargarArbol() {
+        const res = await fetch('/api/arbol-configuracion');
+        const data = await res.json();
+        const grid = document.getElementById('grid-arbol');
+        grid.innerHTML = '';
+        const sucs = {};
+        data.forEach(r => {
+            if (!sucs[r.suc_id]) sucs[r.suc_id] = { id: r.suc_id, nombre: r.suc_nombre, cajas: {} };
+            if (r.caja_id && !sucs[r.suc_id].cajas[r.caja_id]) sucs[r.suc_id].cajas[r.caja_id] = { id: r.caja_id, nombre: r.nombre_caja, terms: [] };
+            if (r.term_id) sucs[r.suc_id].cajas[r.caja_id].terms.push(r);
+        });
+
+        for (let sid in sucs) {
+            const s = sucs[sid];
+            let h = `<div class="sucursal-card"><div class="sucursal-header">🏛️ ${s.nombre} <div><button class="icon-btn" onclick="nuevaCaja(${s.id})">➕ Caja</button></div></div>`;
+            for (let cid in s.cajas) {
+                const c = s.cajas[cid];
+                h += `<div class="caja-card"><span>📦 ${c.nombre}</span> <button class="icon-btn" onclick="abrirModal(${c.id})">➕ Terminal</button></div>`;
+                c.terms.forEach(t => {
+                    h += `<div class="term-item">
+                        <span>💻 <b>${t.empresa}:</b> ${t.identificador_externo} <br>
+                        <small style="color:#10b981">Comisión: ${t.comision_porcentaje_efectivo}% Efec | $${t.comision_fija_debito} Débito</small></span>
+                        <div><button class="icon-btn" onclick='alert("Editar pronto...")'>✏️</button></div>
+                    </div>`;
+                });
+            }
+            grid.innerHTML += h + `</div>`;
+        }
+    }
+    cargarArbol();
+</script>
