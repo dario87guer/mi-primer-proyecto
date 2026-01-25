@@ -1,47 +1,159 @@
 <div style="padding: 20px;">
-    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 25px;">
-        <h2 style="font-weight: 900; color: var(--color-principal-dark);">Red y Comisiones</h2>
-        <button class="btn" onclick="nuevaSucursal()">+ Nueva Sucursal</button>
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px;">
+        <div>
+            <h2 style="font-weight: 900; color: #1e293b; margin: 0; font-size: 28px; letter-spacing: -0.02em;">Configuración de Red</h2>
+            <p style="color: #64748b; margin-top: 5px;">Administre sus Sucursales, Cajas y Comisiones por Empresa</p>
+        </div>
+        <button class="btn" onclick="openModal('sucursales')" style="background: var(--color-principal); padding: 12px 24px; border-radius: 10px; font-weight: 700; color: white; display: flex; align-items: center; gap: 8px;">
+            <span>+</span> NUEVA SUCURSAL
+        </button>
     </div>
-    <div id="grid-arbol"></div>
-</div>
 
-<style>
-    .sucursal-card { background: #fff; border-radius: 12px; padding: 20px; margin-bottom: 20px; border-left: 8px solid var(--color-principal); box-shadow: var(--color-shadow); }
-    .sucursal-header { display: flex; justify-content: space-between; align-items: center; font-weight: 900; font-size: 18px; margin-bottom: 15px; }
-    .caja-card { background: #f8fafc; padding: 12px; border-radius: 8px; margin: 10px 0; border: 1px solid #e2e8f0; display: flex; justify-content: space-between; }
-    .term-item { padding: 8px 12px; font-size: 14px; border-bottom: 1px solid #edf2f7; display: flex; justify-content: space-between; align-items: center; }
-    .icon-btn { background: #e2e8f0; border: none; cursor: pointer; padding: 5px 8px; border-radius: 6px; margin-left: 4px; }
-</style>
+    <div id="tree-container" class="fade-in"></div>
+
+    <div id="customModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(15, 23, 42, 0.4); z-index: 9999; backdrop-filter: blur(6px);">
+        <div style="background: white; width: 90%; max-width: 480px; margin: 60px auto; border-radius: 20px; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25); overflow: hidden;">
+            <div style="padding: 20px 25px; border-bottom: 1px solid #f1f5f9; display: flex; justify-content: space-between; align-items: center; background: #fff;">
+                <h3 id="modalTitle" style="margin: 0; font-weight: 800; color: #1e293b; font-size: 18px;">Título</h3>
+                <button onclick="closeModal()" style="background: #f1f5f9; border: none; width: 32px; height: 32px; border-radius: 50%; font-size: 20px; cursor: pointer; color: #64748b; display: flex; align-items: center; justify-content: center;">&times;</button>
+            </div>
+            <div style="padding: 25px;" id="modalBody"></div>
+            <div style="padding: 20px 25px; border-top: 1px solid #f1f5f9; display: flex; justify-content: flex-end; gap: 12px; background: #f8fafc;">
+                <button class="btn" onclick="closeModal()" style="background: #fff; color: #64748b; border: 1px solid #e2e8f0;">CANCELAR</button>
+                <button id="modalActionBtn" class="btn" style="background: var(--color-principal); color: white; padding: 10px 25px; font-weight: 800;">GUARDAR</button>
+            </div>
+        </div>
+    </div>
+</div>
 
 <script>
     async function cargarArbol() {
-        const res = await fetch('/api/arbol-configuracion');
-        const data = await res.json();
-        const grid = document.getElementById('grid-arbol');
-        grid.innerHTML = '';
-        const sucs = {};
-        data.forEach(r => {
-            if (!sucs[r.suc_id]) sucs[r.suc_id] = { id: r.suc_id, nombre: r.suc_nombre, cajas: {} };
-            if (r.caja_id && !sucs[r.suc_id].cajas[r.caja_id]) sucs[r.suc_id].cajas[r.caja_id] = { id: r.caja_id, nombre: r.nombre_caja, terms: [] };
-            if (r.term_id) sucs[r.suc_id].cajas[r.caja_id].terms.push(r);
-        });
+        try {
+            const res = await fetch('/api/arbol-configuracion');
+            const data = await res.json();
+            const container = document.getElementById('tree-container');
+            container.innerHTML = "";
 
-        for (let sid in sucs) {
-            const s = sucs[sid];
-            let h = `<div class="sucursal-card"><div class="sucursal-header">🏛️ ${s.nombre} <div><button class="icon-btn" onclick="nuevaCaja(${s.id})">➕ Caja</button></div></div>`;
-            for (let cid in s.cajas) {
-                const c = s.cajas[cid];
-                h += `<div class="caja-card"><span>📦 ${c.nombre}</span> <button class="icon-btn" onclick="abrirModal(${c.id})">➕ Terminal</button></div>`;
-                c.terms.forEach(t => {
-                    h += `<div class="term-item">
-                        <span>💻 <b>${t.empresa}:</b> ${t.identificador_externo} <br>
-                        <small style="color:#10b981">Comisión: ${t.comision_porcentaje_efectivo}% Efec | $${t.comision_fija_debito} Débito</small></span>
-                        <div><button class="icon-btn" onclick='alert("Editar pronto...")'>✏️</button></div>
-                    </div>`;
-                });
+            const sucursales = {};
+            data.forEach(r => {
+                if (!r.suc_id) return;
+                if (!sucursales[r.suc_id]) sucursales[r.suc_id] = { id: r.suc_id, nombre: r.suc_nombre, cajas: {} };
+                if (r.caja_id) {
+                    if (!sucursales[r.suc_id].cajas[r.caja_id]) sucursales[r.suc_id].cajas[r.caja_id] = { id: r.caja_id, nombre: r.nombre_caja, terminales: [] };
+                    if (r.term_id) sucursales[r.suc_id].cajas[r.caja_id].terminales.push(r);
+                }
+            });
+
+            if (Object.keys(sucursales).length === 0) {
+                container.innerHTML = `<div style="text-align:center; padding:50px; color:#64748b;">No hay sucursales cargadas aún. Use el botón superior para empezar.</div>`;
+                return;
             }
-            grid.innerHTML += h + `</div>`;
+
+            Object.values(sucursales).forEach(suc => {
+                const sucDiv = document.createElement('div');
+                sucDiv.style.cssText = "background: #fff; border-radius: 16px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); margin-bottom: 25px; border: 1px solid #f1f5f9; overflow: hidden;";
+                sucDiv.innerHTML = `
+                    <div style="background: #f8fafc; padding: 18px 25px; border-bottom: 1px solid #f1f5f9; display: flex; justify-content: space-between; align-items: center;">
+                        <span style="font-weight: 800; color: #1e293b; font-size: 18px;">🏠 ${suc.nombre}</span>
+                        <div style="display: flex; gap: 10px;">
+                            <button onclick="openModal('sucursales', ${suc.id}, '${suc.nombre}')" style="padding: 7px 15px; border-radius: 8px; border: 1px solid #e2e8f0; background: white; cursor: pointer; font-size: 12px; font-weight: 700; color: #64748b;">EDITAR</button>
+                            <button onclick="openModal('cajas', null, null, ${suc.id})" style="padding: 7px 15px; border-radius: 8px; border: none; background: #6366f1; color: white; cursor: pointer; font-size: 12px; font-weight: 700;">+ CAJA</button>
+                            <button onclick="confirmarEliminar('sucursales', ${suc.id})" style="padding: 7px 15px; border-radius: 8px; background: #fee2e2; color: #ef4444; border: none; cursor: pointer; font-size: 12px;">BORRAR</button>
+                        </div>
+                    </div>
+                    <div style="padding: 25px; display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 20px;" id="cajas-${suc.id}"></div>
+                `;
+                container.appendChild(sucDiv);
+
+                Object.values(suc.cajas).forEach(caja => {
+                    const cajaDiv = document.createElement('div');
+                    cajaDiv.style.cssText = "background: #f8fafc; padding: 20px; border-radius: 12px; border: 1px solid #f1f5f9;";
+                    cajaDiv.innerHTML = `
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; padding-bottom: 10px; border-bottom: 1px dashed #e2e8f0;">
+                            <span style="font-weight: 800; color: #334155; font-size: 15px;">🖥️ ${caja.nombre}</span>
+                            <div style="display: flex; gap: 8px;">
+                                <button onclick="openModal('cajas', ${caja.id}, '${caja.nombre}')" style="background: none; border: none; color: #6366f1; cursor: pointer; font-size: 11px; font-weight: 700;">Editar</button>
+                                <button onclick="confirmarEliminar('cajas', ${caja.id})" style="background: none; border: none; color: #ef4444; cursor: pointer; font-size: 11px; font-weight: 700;">Borrar</button>
+                            </div>
+                        </div>
+                        <div id="terms-${caja.id}" style="display: flex; flex-direction: column; gap: 10px;"></div>
+                        <button onclick="openModal('terminales', null, null, null, ${caja.id})" style="width: 100%; margin-top: 15px; padding: 10px; border-radius: 8px; border: 2px dashed #cbd5e1; background: #fff; color: #64748b; font-size: 11px; cursor: pointer; font-weight: 800;">+ ASIGNAR TERMINAL</button>
+                    `;
+                    document.getElementById(`cajas-${suc.id}`).appendChild(cajaDiv);
+
+                    caja.terminales.forEach(t => {
+                        const termDiv = document.createElement('div');
+                        termDiv.style.cssText = "background: white; padding: 12px; border-radius: 10px; border: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 1px 3px rgba(0,0,0,0.02);";
+                        termDiv.innerHTML = `
+                            <div style="display: flex; flex-direction: column;">
+                                <span style="font-weight: 800; color: #1e293b; font-size: 13px;">${t.empresa}</span>
+                                <span style="font-size: 11px; color: #64748b; font-family: monospace;">ID: ${t.identificador_externo}</span>
+                                <div style="margin-top: 4px; display: flex; gap: 8px;">
+                                    <span style="font-size: 10px; background: #f0fdf4; color: #166534; padding: 2px 6px; border-radius: 4px; font-weight: 700;">Efec: ${t.comision_efectivo_porcentaje || 0}%</span>
+                                    <span style="font-size: 10px; background: #eff6ff; color: #1e40af; padding: 2px 6px; border-radius: 4px; font-weight: 700;">Deb: $${t.precio_fijo_debito || 0}</span>
+                                </div>
+                            </div>
+                            <div style="display: flex; gap: 5px;">
+                                <button onclick="openModal('terminales', ${t.term_id}, '${t.identificador_externo}', null, ${caja.id}, '${t.empresa}', ${t.comision_efectivo_porcentaje}, ${t.precio_fijo_debito})" style="border: none; background: #f1f5f9; color: #475569; padding: 6px; border-radius: 6px; cursor: pointer; font-size: 11px; font-weight: 700;">EDIT</button>
+                                <button onclick="confirmarEliminar('terminales', ${t.term_id})" style="border: none; background: #fff1f2; color: #e11d48; padding: 6px; border-radius: 6px; cursor: pointer; font-size: 11px;">✕</button>
+                            </div>
+                        `;
+                        document.getElementById(`terms-${caja.id}`).appendChild(termDiv);
+                    });
+                });
+            });
+        } catch (e) {
+            console.error("Error cargando el árbol:", e);
+            document.getElementById('tree-container').innerHTML = `<div style="color:red; padding:20px;">Error al cargar datos. Verifique que las columnas de comisión existan en la DB.</div>`;
+        }
+    }
+
+    function openModal(tipo, id = null, nombre = '', sucId = null, cajaId = null, empresa = '', comEfec = 0, preDeb = 0) {
+        const modal = document.getElementById('customModal');
+        const title = document.getElementById('modalTitle');
+        const body = document.getElementById('modalBody');
+        const btn = document.getElementById('modalActionBtn');
+        modal.style.display = 'block';
+        title.innerText = (id ? 'Editar ' : 'Nueva ') + (tipo === 'terminales' ? 'Terminal' : (tipo === 'sucursales' ? 'Sucursal' : 'Caja'));
+
+        if (tipo === 'sucursales' || tipo === 'cajas') {
+            body.innerHTML = `<div><label style="display:block; font-weight:800; margin-bottom:10px; font-size:13px; color:#475569;">Nombre:</label><input type="text" id="mNombre" value="${nombre}" style="width:100%; padding:12px; border:1.5px solid #e2e8f0; border-radius:10px; font-size:14px; outline:none;"></div>`;
+            btn.onclick = () => guardar(tipo, id, sucId);
+        } else if (tipo === 'terminales') {
+            body.innerHTML = `
+                <div style="margin-bottom:18px;"><label style="display:block; font-weight:800; margin-bottom:8px; font-size:13px; color:#475569;">Empresa:</label><select id="mEmpresa" ${id ? 'disabled' : ''} style="width:100%; padding:12px; border:1.5px solid #e2e8f0; border-radius:10px; font-size:14px; background:#fff;"><option value="SEAC" ${empresa==='SEAC'?'selected':''}>SEAC</option><option value="COBRO EXPRESS" ${empresa==='COBRO EXPRESS'?'selected':''}>COBRO EXPRESS</option><option value="PAGO FÁCIL" ${empresa==='PAGO FÁCIL'?'selected':''}>PAGO FÁCIL</option></select></div>
+                <div style="margin-bottom:18px;"><label style="display:block; font-weight:800; margin-bottom:8px; font-size:13px; color:#475569;">ID Externo / Terminal:</label><input type="text" id="mIdent" value="${nombre}" style="width:100%; padding:12px; border:1.5px solid #e2e8f0; border-radius:10px; font-size:14px;"></div>
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:15px;">
+                    <div><label style="display:block; font-weight:800; margin-bottom:8px; font-size:12px; color:#475569;">Comisión % Efec:</label><input type="number" step="0.01" id="mCom" value="${comEfec}" style="width:100%; padding:12px; border:1.5px solid #e2e8f0; border-radius:10px; font-size:14px;"></div>
+                    <div><label style="display:block; font-weight:800; margin-bottom:8px; font-size:12px; color:#475569;">Precio Fijo Deb:</label><input type="number" step="0.01" id="mPre" value="${preDeb}" style="width:100%; padding:12px; border:1.5px solid #e2e8f0; border-radius:10px; font-size:14px;"></div>
+                </div>`;
+            btn.onclick = () => guardar(tipo, id, null, cajaId);
+        }
+    }
+
+    function closeModal() { document.getElementById('customModal').style.display = 'none'; }
+
+    async function guardar(tipo, id, sucId, cajaId) {
+        const payload = {};
+        if (tipo === 'terminales') {
+            payload.empresa = document.getElementById('mEmpresa').value;
+            payload.identificador = document.getElementById('mIdent').value;
+            payload.comision_efec = document.getElementById('mCom').value || 0;
+            payload.precio_deb = document.getElementById('mPre').value || 0;
+            payload.caja_id = cajaId;
+        } else {
+            payload.nombre = document.getElementById('mNombre').value;
+            if (sucId) payload.sucursal_id = sucId;
+        }
+        const url = id ? `/api/${tipo}/${id}` : `/api/${tipo}`;
+        const res = await fetch(url, { method: id ? 'PUT' : 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+        if (res.ok) { closeModal(); cargarArbol(); } else { alert("Error al guardar."); }
+    }
+
+    async function confirmarEliminar(tipo, id) {
+        if (confirm("¿Estás seguro? Esta acción no se puede deshacer.")) {
+            const res = await fetch(`/api/${tipo}/${id}`, { method: 'DELETE' });
+            if (res.ok) cargarArbol(); else { const d = await res.json(); alert(d.error); }
         }
     }
     cargarArbol();

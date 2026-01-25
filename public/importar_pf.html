@@ -1,79 +1,111 @@
 <div style="padding: 20px;">
-    <button class="btn" onclick="loadSection('importar')" style="margin-bottom:20px; background:#64748b;">← Volver al Selector</button>
+    <button class="btn" onclick="loadSection('importar')" 
+            style="margin-bottom:25px; background: #fff; color: var(--color-principal); border: 1.5px solid var(--color-principal); display: flex; align-items: center; gap: 8px; padding: 8px 18px; border-radius: 8px; cursor: pointer; transition: 0.3s;" onmouseover="this.style.background='#f8fafc'">
+        <span style="font-size: 18px;">←</span> <span style="font-weight: 700;">VOLVER AL SELECTOR</span>
+    </button>
     
     <div style="display: flex; align-items: center; gap: 15px; margin-bottom: 20px;">
         <span style="font-size: 30px;">🔵</span>
-        <h2 style="font-weight: 900; color: #6366f1; margin: 0;">Importador PAGO FÁCIL (.TXT)</h2>
+        <h2 style="font-weight: 900; color: #6366f1; margin: 0; letter-spacing: -0.01em;">Importador PAGO FÁCIL (Reporte TCA)</h2>
     </div>
 
-    <div class="card-upload" style="border-top: 5px solid #6366f1;">
-        <p style="font-weight: 700; color: #475569;">1. Seleccione uno o varios archivos .TXT de Pago Fácil:</p>
-        <input type="file" id="filePF" multiple class="file-input" accept=".txt">
+    <div class="card-upload" style="border-top: 5px solid #6366f1; background: #fff; padding: 25px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.05);">
+        <p style="font-weight: 700; color: #475569; margin-bottom: 10px;">1. Seleccione archivos de transacciones (TCA...):</p>
         
-        <p style="font-weight: 700; color: #475569; margin-top: 20px;">2. Iniciar procesamiento de archivos:</p>
-        <button class="btn" onclick="procesarPF()" style="background: #6366f1; width: 100%; max-width: 300px;">SUBIR ARCHIVOS TXT</button>
+        <label for="filePF" style="display: block; padding: 20px; border: 2px dashed #6366f1; border-radius: 10px; text-align: center; cursor: pointer; background: #eff6ff; margin-bottom: 20px; transition: 0.3s;" onmouseover="this.style.background='#dbeafe'" onmouseout="this.style.background='#eff6ff'">
+            <span style="font-size: 24px; display: block; margin-bottom: 5px;">📄</span>
+            <span style="font-weight: 600; color: #1e40af;">Click para buscar archivos TXT de Pago Fácil</span>
+            <input type="file" id="filePF" multiple accept=".txt" style="display: none;" onchange="document.getElementById('file-name-pf').innerText = this.files.length + ' archivos seleccionados'">
+        </label>
+        <p id="file-name-pf" style="font-size: 13px; color: #64748b; text-align: center; margin-top: -15px; margin-bottom: 15px;"></p>
+        
+        <p style="font-weight: 700; color: #475569; margin-top: 20px;">2. Ejecutar procesamiento:</p>
+        <button class="btn" onclick="procesarPF()" style="background: #6366f1; width: 100%; height: 50px; font-size: 16px; border-radius: 10px; font-weight: 800; color: white; box-shadow: 0 4px 10px rgba(99, 102, 241, 0.2); cursor: pointer;">🚀 PROCESAR REPORTES TCA</button>
 
-        <div id="progreso-pf" style="display:none; margin-top: 20px;">
-            <div style="height: 10px; background: #e2e8f0; border-radius: 10px; overflow: hidden;">
+        <div id="progreso-pf" style="display:none; margin-top: 25px;">
+            <div style="height: 12px; background: #e2e8f0; border-radius: 10px; overflow: hidden;">
                 <div id="barra-pf" style="width: 0%; height: 100%; background: #6366f1; transition: width 0.3s;"></div>
             </div>
-            <p id="txt-proceso-pf" style="font-size: 12px; font-weight: 700; margin-top: 5px; color: #64748b;"></p>
+            <p id="txt-proceso-pf" style="font-size: 13px; font-weight: 700; margin-top: 8px; color: #64748b; text-align: center;"></p>
         </div>
 
-        <div id="res-pf" style="margin-top: 20px;"></div>
+        <div id="res-pf" style="margin-top: 25px;"></div>
+        
+        <div id="log-container-pf" style="display:none; margin-top: 25px;">
+            <h4 style="color: #334155; font-size: 14px; border-bottom: 2px solid #e2e8f0; padding-bottom: 8px; font-weight: 900;">AUDITORÍA DETALLADA PAGO FÁCIL:</h4>
+            <div id="log-list-pf" style="max-height: 250px; overflow-y: auto; background: #111827; color: #60a5fa; padding: 15px; border-radius: 8px; font-family: 'Courier New', monospace; font-size: 12px; line-height: 1.6; border: 1px solid #374151;">
+            </div>
+        </div>
     </div>
-</div>
+    </div>
+
 <script>
+    // SECCION PROHIBIDO TOCAR - INICIO
     async function procesarPF() {
         const input = document.getElementById('filePF');
         const resDiv = document.getElementById('res-pf');
-        const progDiv = document.getElementById('progreso-pf');
+        const logList = document.getElementById('log-list-pf');
+        const logCont = document.getElementById('log-container-pf');
         const barra = document.getElementById('barra-pf');
+        const progDiv = document.getElementById('progreso-pf');
         
-        if (!input.files.length) return alert('Por favor, seleccioná archivos TXT de Pago Fácil.');
+        if (!input.files.length) return alert('Por favor, seleccioná archivos de Pago Fácil.');
 
-        resDiv.innerHTML = "";
-        progDiv.style.display = "block";
+        resDiv.innerHTML = ""; logList.innerHTML = ""; logCont.style.display = "block"; progDiv.style.display = "block";
         let totN = 0, totE = 0, totD = 0;
 
         for (let i = 0; i < input.files.length; i++) {
             const file = input.files[i];
             const p = Math.round(((i + 1) / input.files.length) * 100);
             barra.style.width = p + "%";
-            document.getElementById('txt-proceso-pf').innerText = `Leyendo: ${file.name}`;
+            document.getElementById('txt-proceso-pf').innerText = `Analizando: ${file.name}`;
+            addLogPF(`> Leyendo reporte: ${file.name}`, '#94a3b8');
 
-            const fd = new FormData();
-            fd.append('archivo', file);
-            // El backend ya sabe que si la ruta es /pagofacil debe tratarlo como TXT
+            const fd = new FormData(); fd.append('archivo', file);
 
             try {
-                const response = await fetch('/importar/pagofacil', { 
-                    method: 'POST', 
-                    body: fd 
-                });
+                const response = await fetch('/importar/pagofacil', { method: 'POST', body: fd });
                 const data = await response.json();
                 
-                if (!response.ok) throw new Error(data.error || "Error en servidor");
-                
-                totN += (data.nuevos || 0);
-                totE += (data.errores || 0);
-                totD += (data.omitidos || 0);
+                if (!response.ok) {
+                    addLogPF(`[ERROR]: ${data.error || 'Falla en el proceso'}`, '#f87171');
+                    totE++; continue;
+                }
+
+                if (data.detalles && data.detalles.length > 0) {
+                    data.detalles.forEach(d => {
+                        let color = '#60a5fa'; 
+                        if(d.status === 'OK') color = '#34d399'; 
+                        if(d.status === 'ERROR') color = '#f87171'; 
+                        if(d.status === 'DUPLICADO') color = '#60a5fa';
+                        if(d.status === 'DENEGADO') color = '#fbbf24';
+                        addLogPF(`[${d.status}] Term: ${d.pdv} | ${d.msg} | $${d.monto || 0}`, color);
+                    });
+                }
+                totN += data.nuevos; totE += data.errores; totD += data.omitidos;
             } catch (err) {
-                console.error(err);
+                addLogPF(`[ERROR RED]: ${err.message}`, '#f87171');
                 totE++;
             }
         }
 
         progDiv.style.display = "none";
         resDiv.innerHTML = `
-            <div style="padding:15px; background:#eff6ff; border:1px solid #bfdbfe; border-radius:10px;">
-                <h4 style="margin-top:0; color:#1e40af;">✅ Importación Pago Fácil Finalizada</h4>
-                <ul style="margin-bottom:0; font-size:14px; font-weight:700;">
-                    <li>Registros Nuevos: ${totN}</li>
-                    <li>Omitidos (Duplicados o Terminal no mapeada): ${totD}</li>
-                    <li>Errores: ${totE}</li>
-                </ul>
+            <div style="padding:20px; background:#eff6ff; border:2px solid #bfdbfe; border-radius:12px; text-align:center;">
+                <h4 style="margin:0 0 10px 0; color:#1e40af; font-weight:900;">CARGA FINALIZADA</h4>
+                <div style="display:grid; grid-template-columns: 1fr 1fr 1fr; gap:10px;">
+                    <div style="background:white; padding:10px; border-radius:8px;"><span style="display:block; font-size:10px;">NUEVOS</span><b>${totN}</b></div>
+                    <div style="background:white; padding:10px; border-radius:8px;"><span style="display:block; font-size:10px;">EXISTENTES</span><b>${totD}</b></div>
+                    <div style="background:white; padding:10px; border-radius:8px;"><span style="display:block; font-size:10px;">ERRORES</span><b>${totE}</b></div>
+                </div>
             </div>`;
-        input.value = "";
     }
+
+    function addLogPF(txt, color) {
+        const div = document.createElement('div');
+        div.style.color = color; div.style.marginBottom = "4px"; div.innerText = txt;
+        document.getElementById('log-list-pf').appendChild(div);
+        document.getElementById('log-list-pf').scrollTop = document.getElementById('log-list-pf').scrollHeight;
+    }
+    // SECCION PROHIBIDO TOCAR - FIN
 </script>

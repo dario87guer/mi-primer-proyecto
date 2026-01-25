@@ -1,0 +1,190 @@
+<div style="padding: 20px;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px;">
+        <div>
+            <h2 style="font-weight: 900; color: #1e293b; margin: 0; font-size: 28px;">Configuración de Red</h2>
+            <p style="color: #64748b; margin-top: 5px;">Administración de Sucursales, Cajas y Terminales</p>
+        </div>
+        <button class="btn" onclick="openModal('sucursales')" style="background: var(--color-principal); padding: 12px 24px; border-radius: 10px; font-weight: 700; color: white; display: flex; align-items: center; gap: 8px;">
+            <span>+</span> NUEVA SUCURSAL
+        </button>
+    </div>
+
+    <div id="tree-container" class="fade-in"></div>
+
+    <div id="customModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 9999; backdrop-filter: blur(4px);">
+        <div style="background: white; width: 90%; max-width: 500px; margin: 50px auto; border-radius: 16px; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1); overflow: hidden;">
+            <div style="padding: 20px; border-bottom: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center; background: #f8fafc;">
+                <h3 id="modalTitle" style="margin: 0; font-weight: 800; color: #1e293b;">Título</h3>
+                <button onclick="closeModal()" style="background: none; border: none; font-size: 24px; cursor: pointer; color: #94a3b8;">&times;</button>
+            </div>
+            <div style="padding: 25px;" id="modalBody">
+                </div>
+            <div style="padding: 20px; border-top: 1px solid #e2e8f0; display: flex; justify-content: flex-end; gap: 10px; background: #f8fafc;">
+                <button class="btn" onclick="closeModal()" style="background: #e2e8f0; color: #475569;">CANCELAR</button>
+                <button id="modalActionBtn" class="btn" style="background: var(--color-principal); color: white;">GUARDAR</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    async function cargarArbol() {
+        const res = await fetch('/api/arbol-configuracion');
+        const data = await res.json();
+        const container = document.getElementById('tree-container');
+        container.innerHTML = "";
+
+        const sucursales = {};
+        data.forEach(r => {
+            if (!sucursales[r.suc_id]) sucursales[r.suc_id] = { id: r.suc_id, nombre: r.suc_nombre, cajas: {} };
+            if (r.caja_id) {
+                if (!sucursales[r.suc_id].cajas[r.caja_id]) sucursales[r.suc_id].cajas[r.caja_id] = { id: r.caja_id, nombre: r.nombre_caja, terminales: [] };
+                if (r.term_id) sucursales[r.suc_id].cajas[r.caja_id].terminales.push(r);
+            }
+        });
+
+        Object.values(sucursales).forEach(suc => {
+            const sucDiv = document.createElement('div');
+            sucDiv.style.cssText = "background: #fff; border-radius: 12px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); margin-bottom: 20px; border: 1px solid #e2e8f0; overflow: hidden;";
+            sucDiv.innerHTML = `
+                <div style="background: #f8fafc; padding: 15px 20px; border-bottom: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center;">
+                    <span style="font-weight: 800; color: #1e293b; font-size: 18px;">🏠 ${suc.nombre}</span>
+                    <div style="display: flex; gap: 8px;">
+                        <button onclick="openModal('sucursales', ${suc.id}, '${suc.nombre}')" style="padding: 6px 12px; border-radius: 6px; border: 1px solid #cbd5e1; background: white; cursor: pointer; font-size: 12px; font-weight: 700; color: #475569;">EDITAR</button>
+                        <button onclick="openModal('cajas', null, null, ${suc.id})" style="padding: 6px 12px; border-radius: 6px; border: none; background: #6366f1; color: white; cursor: pointer; font-size: 12px; font-weight: 700;">+ CAJA</button>
+                        <button onclick="confirmarEliminar('sucursales', ${suc.id})" style="padding: 6px 12px; border-radius: 6px; background: #fee2e2; color: #ef4444; border: none; cursor: pointer; font-size: 12px;">ELIMINAR</button>
+                    </div>
+                </div>
+                <div style="padding: 20px; display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 20px;" id="cajas-${suc.id}"></div>
+            `;
+            container.appendChild(sucDiv);
+
+            Object.values(suc.cajas).forEach(caja => {
+                const cajaDiv = document.createElement('div');
+                cajaDiv.style.cssText = "background: #f1f5f9; padding: 15px; border-radius: 10px; border: 1px solid #e2e8f0;";
+                cajaDiv.innerHTML = `
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; padding-bottom: 8px; border-bottom: 1px dashed #cbd5e1;">
+                        <span style="font-weight: 700; color: #334155;">🖥️ ${caja.nombre}</span>
+                        <div style="display: flex; gap: 5px;">
+                            <button onclick="openModal('cajas', ${caja.id}, '${caja.nombre}')" style="background: none; border: none; color: #64748b; cursor: pointer; font-size: 11px; text-decoration: underline;">Editar</button>
+                            <button onclick="confirmarEliminar('cajas', ${caja.id})" style="background: none; border: none; color: #ef4444; cursor: pointer; font-size: 11px; text-decoration: underline;">Eliminar</button>
+                        </div>
+                    </div>
+                    <div id="terms-${caja.id}" style="display: flex; flex-direction: column; gap: 8px;"></div>
+                    <button onclick="openModal('terminales', null, null, null, ${caja.id})" style="width: 100%; margin-top: 10px; padding: 6px; border-radius: 6px; border: 1px dashed #94a3b8; background: transparent; color: #64748b; font-size: 11px; cursor: pointer; font-weight: 600;">+ ASIGNAR TERMINAL</button>
+                `;
+                document.getElementById(`cajas-${suc.id}`).appendChild(cajaDiv);
+
+                caja.terminales.forEach(t => {
+                    const termDiv = document.createElement('div');
+                    termDiv.style.cssText = "background: white; padding: 10px; border-radius: 8px; border: 1px solid #e2e8f0; font-size: 13px; display: flex; justify-content: space-between; align-items: center;";
+                    termDiv.innerHTML = `
+                        <div style="display: flex; flex-direction: column;">
+                            <span style="font-weight: 700; color: #1e293b;">${t.empresa} (${t.identificador_externo})</span>
+                            <span style="font-size: 10px; color: #64748b;">Efec: ${t.comision_efectivo_porcentaje || 0}% | Deb: $${t.precio_fijo_debito || 0}</span>
+                        </div>
+                        <div style="display: flex; gap: 8px;">
+                            <button onclick="openModal('terminales', ${t.term_id}, '${t.identificador_externo}', null, null, '${t.empresa}', ${t.comision_efectivo_porcentaje}, ${t.precio_fijo_debito})" style="border: none; background: #e0f2fe; color: #0369a1; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 11px;">Edit</button>
+                            <button onclick="confirmarEliminar('terminales', ${t.term_id})" style="border: none; background: #fff1f2; color: #e11d48; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 11px;">&times;</button>
+                        </div>
+                    `;
+                    document.getElementById(`terms-${caja.id}`).appendChild(termDiv);
+                });
+            });
+        });
+    }
+
+    // GESTIÓN DE MODALES (VENTANAS EN LA WEB)
+    function openModal(tipo, id = null, nombre = '', sucId = null, cajaId = null, empresa = '', comEfec = 0, preDeb = 0) {
+        const modal = document.getElementById('customModal');
+        const title = document.getElementById('modalTitle');
+        const body = document.getElementById('modalBody');
+        const btn = document.getElementById('modalActionBtn');
+        
+        modal.style.display = 'block';
+        title.innerText = (id ? 'Editar ' : 'Nueva ') + tipo.slice(0, -1).charAt(0).toUpperCase() + tipo.slice(1, -1);
+
+        if (tipo === 'sucursales' || tipo === 'cajas') {
+            body.innerHTML = `
+                <div style="margin-bottom: 15px;">
+                    <label style="display: block; font-weight: 700; margin-bottom: 8px; font-size: 13px;">Nombre:</label>
+                    <input type="text" id="modalInputNombre" value="${nombre}" style="width: 100%; padding: 12px; border: 1px solid #cbd5e1; border-radius: 8px;">
+                </div>
+            `;
+            btn.onclick = () => guardar(tipo, id, sucId);
+        } else if (tipo === 'terminales') {
+            body.innerHTML = `
+                <div style="margin-bottom: 15px;">
+                    <label style="display: block; font-weight: 700; margin-bottom: 8px; font-size: 13px;">Empresa:</label>
+                    <select id="modalInputEmpresa" ${id ? 'disabled' : ''} style="width: 100%; padding: 12px; border: 1px solid #cbd5e1; border-radius: 8px;">
+                        <option value="SEAC" ${empresa === 'SEAC' ? 'selected' : ''}>SEAC</option>
+                        <option value="COBRO EXPRESS" ${empresa === 'COBRO EXPRESS' ? 'selected' : ''}>COBRO EXPRESS</option>
+                        <option value="PAGO FÁCIL" ${empresa === 'PAGO FÁCIL' ? 'selected' : ''}>PAGO FÁCIL</option>
+                    </select>
+                </div>
+                <div style="margin-bottom: 15px;">
+                    <label style="display: block; font-weight: 700; margin-bottom: 8px; font-size: 13px;">ID Externo / Terminal:</label>
+                    <input type="text" id="modalInputIdentificador" value="${nombre}" style="width: 100%; padding: 12px; border: 1px solid #cbd5e1; border-radius: 8px;">
+                </div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                    <div>
+                        <label style="display: block; font-weight: 700; margin-bottom: 8px; font-size: 11px;">Comisión % (Efectivo):</label>
+                        <input type="number" step="0.01" id="modalInputComEfec" value="${comEfec}" style="width: 100%; padding: 12px; border: 1px solid #cbd5e1; border-radius: 8px;">
+                    </div>
+                    <div>
+                        <label style="display: block; font-weight: 700; margin-bottom: 8px; font-size: 11px;">Precio Fijo $ (Débito):</label>
+                        <input type="number" step="0.01" id="modalInputPreDeb" value="${preDeb}" style="width: 100%; padding: 12px; border: 1px solid #cbd5e1; border-radius: 8px;">
+                    </div>
+                </div>
+            `;
+            btn.onclick = () => guardar(tipo, id, null, cajaId);
+        }
+    }
+
+    function closeModal() {
+        document.getElementById('customModal').style.display = 'none';
+    }
+
+    async function guardar(tipo, id, sucId, cajaId) {
+        const payload = {};
+        if (tipo === 'terminales') {
+            payload.empresa = document.getElementById('modalInputEmpresa').value;
+            payload.identificador = document.getElementById('modalInputIdentificador').value;
+            payload.comision_efec = document.getElementById('modalInputComEfec').value;
+            payload.precio_deb = document.getElementById('modalInputPreDeb').value;
+            payload.caja_id = cajaId;
+        } else {
+            payload.nombre = document.getElementById('modalInputNombre').value;
+            if (sucId) payload.sucursal_id = sucId;
+        }
+
+        const url = id ? `/api/${tipo}/${id}` : `/api/${tipo}`;
+        const method = id ? 'PUT' : 'POST';
+
+        const res = await fetch(url, {
+            method,
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+
+        if (res.ok) {
+            closeModal();
+            cargarArbol();
+        } else {
+            alert("Error al guardar.");
+        }
+    }
+
+    async function confirmarEliminar(tipo, id) {
+        if (confirm("¿Está seguro de eliminar este elemento?")) {
+            const res = await fetch(`/api/${tipo}/${id}`, { method: 'DELETE' });
+            if (res.ok) cargarArbol();
+            else {
+                const data = await res.json();
+                alert(data.error);
+            }
+        }
+    }
+
+    cargarArbol();
+</script>
