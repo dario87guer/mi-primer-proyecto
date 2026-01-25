@@ -1,41 +1,198 @@
-<div style="padding: 20px;">
-    <h2 style="font-weight: 900; color: var(--color-principal-dark);">Informe Diario</h2>
-    <div class="controls-row" style="display:flex; gap:10px; margin-bottom:20px; flex-wrap:wrap;">
-        <input type="date" id="fDesde" class="btn" style="background:white; color:black; border:1px solid #ccc;">
-        <input type="date" id="fHasta" class="btn" style="background:white; color:black; border:1px solid #ccc;">
-        <button class="btn" onclick="cargarInforme()">Consultar</button>
+<div style="padding: 20px; font-family: Arial, sans-serif;">
+    <div style="background: #fff; padding: 20px; border-radius: 12px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); border: 1px solid #e2e8f0; margin-bottom: 25px; width: fit-content; margin-left: auto; margin-right: auto;">
+        <div style="display: flex; gap: 15px; align-items: flex-end;">
+            <div><h2 style="margin: 0 0 10px 0; font-size: 18px; font-weight: 900; color: #1e293b;">📊 Informe Detallado</h2></div>
+            <div>
+                <label style="display: block; font-size: 10px; font-weight: 800; color: #64748b; margin-bottom: 3px;">DESDE:</label>
+                <input type="date" id="fecha-desde" style="padding: 6px; border: 1px solid #cbd5e1; border-radius: 6px; font-family: Arial; font-weight: 700; font-size: 13px;">
+            </div>
+            <div>
+                <label style="display: block; font-size: 10px; font-weight: 800; color: #64748b; margin-bottom: 3px;">HASTA:</label>
+                <input type="date" id="fecha-hasta" style="padding: 6px; border: 1px solid #cbd5e1; border-radius: 6px; font-family: Arial; font-weight: 700; font-size: 13px;">
+            </div>
+            <div>
+                <label style="display: block; font-size: 10px; font-weight: 800; color: #64748b; margin-bottom: 3px;">EMPRESA:</label>
+                <select id="select-empresa" style="padding: 6px; border: 1px solid #cbd5e1; border-radius: 6px; font-family: Arial; font-weight: 700; font-size: 13px; background: #f8fafc;">
+                    <option value="SEAC">SEAC</option>
+                    <option value="COBRO EXPRESS">COBRO EXPRESS</option>
+                    <option value="PAGO FÁCIL">PAGO FÁCIL</option>
+                </select>
+            </div>
+            <button class="btn" onclick="generarInforme()" style="background: var(--color-principal); color: white; padding: 8px 15px; border-radius: 6px; font-weight: 800; font-size: 12px; cursor: pointer;">PROCESAR</button>
+            <button class="btn" onclick="exportarExcel()" style="background: #10b981; color: white; padding: 8px 15px; border-radius: 6px; font-weight: 800; font-size: 12px; cursor: pointer;">📥 EXCEL</button>
+        </div>
     </div>
-    <div id="contenedorInformes" style="overflow-x:auto;"></div>
+
+    <div id="contenedor-reportes" style="display: flex; flex-direction: column; align-items: center; gap: 30px;">
+        <div style="text-align: center; padding: 60px; color: #94a3b8; background: #fff; border-radius: 12px; border: 2px dashed #e2e8f0; width: 600px;">
+            <p>Configure filtros y presione PROCESAR.</p>
+        </div>
+    </div>
 </div>
 
 <style>
-    .tabla-inf { width: 100%; border-collapse: collapse; font-size: 11px; margin-bottom: 30px; }
-    .tabla-inf th, .tabla-inf td { border: 1px solid #d1d5db; padding: 6px; text-align: center; }
-    .tabla-inf th { background: #f1f5f9; font-weight: 800; }
-    .border-left-group { border-left: 3px solid #10b981 !important; }
-    .border-right-group { border-right: 3px solid #10b981 !important; }
-    .row-totales { background: #e0f2fe; font-weight: bold; }
+    .seccion-dia { text-align: center; width: fit-content; }
+    .titulo-dia { background: #334155; color: white; padding: 5px 20px; border-radius: 8px 8px 0 0; font-weight: 800; font-size: 12px; display: inline-block; margin-bottom: 0; text-transform: uppercase; }
+    .tabla-dia { border-collapse: collapse; background: #fff; border: 2px solid #1e40af; font-size: 12px; line-height: 1.0; }
+    .tabla-dia th { background: #f1f5f9; color: #475569; padding: 5px 12px; border: 1px solid #cbd5e1; font-weight: 900; font-size: 11px; }
+    .tabla-dia td { padding: 4px 10px; border: 1px solid #e2e8f0; color: #1e293b; }
+    
+    .col-empresa { 
+        writing-mode: vertical-rl; 
+        transform: rotate(180deg); 
+        background: #1e40af; 
+        color: #ffffff !important; 
+        font-weight: 900; 
+        font-size: 10px; 
+        text-align: center; 
+        width: 16px;
+        padding: 10px 2px;
+        border: 1px solid #1e3a8a !important;
+    }
+
+    .monto { text-align: right; font-weight: 700; white-space: nowrap; font-family: Arial; }
+    
+    /* Estilo del Resumen Final Solicitado */
+    .resumen-final { background: #fff; border: 3px solid #1e40af; border-radius: 12px; padding: 20px; margin-top: 30px; width: fit-content; }
+    .resumen-final h3 { color: #1e293b !important; font-weight: 900; font-size: 14px; text-align: center; margin-bottom: 5px; }
+    .resumen-final p { color: #64748b !important; text-align: center; font-size: 11px; margin-bottom: 15px; font-weight: 700; }
+    .resumen-final table { border-collapse: collapse; width: auto; margin-left: auto; margin-right: auto; border: 2px solid #1e40af; }
+    .resumen-final th { background: #f1f5f9; color: #1e40af; padding: 8px; font-size: 11px; font-weight: 900; border: 1px solid #cbd5e1; }
+    .resumen-final tfoot td { background: #1e40af; color: #ffffff !important; font-weight: 900; padding: 8px; }
 </style>
 
+<script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
+
 <script>
-    async function cargarInforme() {
-        const d = document.getElementById('fDesde').value;
-        const h = document.getElementById('fHasta').value;
-        const res = await (await fetch(`/api/informes?desde=${d}&hasta=${h}`)).json();
-        const cont = document.getElementById('contenedorInformes');
-        cont.innerHTML = '<table class="tabla-inf"><thead><tr><th>Fecha</th><th>Local</th><th>Caja</th><th class="border-left-group">PF Monto</th><th class="border-right-group">SEAC Monto</th><th>CE Monto</th><th>Total</th></tr></thead><tbody id="body-inf"></tbody></table>';
-        const body = document.getElementById('body-inf');
-        res.forEach(r => {
-            const total = parseFloat(r.pf_monto_e) + parseFloat(r.seac_monto_e) + parseFloat(r.ce_monto_e);
-            body.innerHTML += `<tr>
-                <td>${new Date(r.fecha).toLocaleDateString()}</td>
-                <td>${r.suc_nombre}</td>
-                <td>${r.nombre_caja}</td>
-                <td class="border-left-group">$ ${r.pf_monto_e}</td>
-                <td class="border-right-group">$ ${r.seac_monto_e}</td>
-                <td>$ ${r.ce_monto_e}</td>
-                <td style="font-weight:900">$ ${total.toFixed(2)}</td>
-            </tr>`;
+    const ahora = new Date();
+    document.getElementById('fecha-desde').value = new Date(ahora.getFullYear(), ahora.getMonth(), 1).toISOString().split('T')[0];
+    document.getElementById('fecha-hasta').value = new Date(ahora.getFullYear(), ahora.getMonth() + 1, 0).toISOString().split('T')[0];
+
+    const diasSemana = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"];
+
+    async function generarInforme() {
+        const d = document.getElementById('fecha-desde').value;
+        const h = document.getElementById('fecha-hasta').value;
+        const emp = document.getElementById('select-empresa').value;
+        const container = document.getElementById('contenedor-reportes');
+
+        const res = await fetch(`/api/informes?desde=${d}&hasta=${h}`);
+        const dataTotal = await res.json();
+        const data = dataTotal.filter(r => r.empresa === emp);
+
+        if (data.length === 0) {
+            container.innerHTML = `<div style="text-align:center; padding:50px;">Sin registros para ${emp}.</div>`;
+            return;
+        }
+
+        const dias = {};
+        data.forEach(r => {
+            const f = r.fecha.split('T')[0];
+            if (!dias[f]) dias[f] = {};
+            const key = `${r.suc_nombre}|${r.boca}`;
+            if (!dias[f][key]) dias[f][key] = { suc: r.suc_nombre, boca: r.boca, efec: 0, extraE: 0, dev: 0, deb: 0, extraD: 0, cantE: 0, cantD: 0, cantTot: 0 };
+            
+            const it = dias[f][key];
+            if (r.medio_pago === 'EFECTIVO') {
+                it.efec += parseFloat(r.importe); it.extraE += parseFloat(r.extra_e); it.dev += parseFloat(r.devoluciones); it.cantE += parseInt(r.cantidad);
+            } else {
+                it.deb += parseFloat(r.importe); it.extraD += parseFloat(r.extra_d); it.cantD += parseInt(r.cantidad);
+            }
+            it.cantTot = it.cantE + it.cantD;
         });
+
+        let html = "";
+        const acumuladoFinal = {};
+
+        Object.keys(dias).sort().forEach(fecha => {
+            const dateObj = new Date(fecha + "T12:00:00");
+            const diaTxt = diasSemana[dateObj.getDay()];
+            const [y, m, day] = fecha.split('-');
+            const filasDia = Object.values(dias[fecha]);
+            
+            html += `<div class="seccion-dia">
+                        <div class="titulo-dia">${day}/${m}/${y} (${diaTxt})</div>
+                        <table class="tabla-dia">
+                            <thead>
+                                <tr><th rowspan="2"></th><th>LOCAL / SUCURSAL</th><th>BOCA</th>${getHeaders(emp)}</tr>
+                            </thead>
+                            <tbody>`;
+            
+            let t1=0, t2=0, t3=0, t4=0, t5=0, t6=0, t7=0, t8=0;
+
+            filasDia.forEach((row, index) => {
+                html += `<tr>`;
+                if (index === 0) html += `<td rowspan="${filasDia.length}" class="col-empresa">${emp}</td>`;
+                html += `<td style="font-weight:800; text-align:left;">${row.suc}</td><td style="text-align:center;">${row.boca || '---'}</td>${getRowData(row, emp)}</tr>`;
+                
+                if(emp==='SEAC'){ t1+=row.efec; t2+=row.cantE; }
+                if(emp==='PAGO FÁCIL'){ t1+=row.deb; t2+=row.cantD; }
+                if(emp==='COBRO EXPRESS'){ 
+                    t1+=(row.efec + row.deb - row.dev); t2+=row.cantTot; t3+=row.deb; t4+=row.cantD; t5+=row.efec; t6+=row.cantE; t7+=row.dev; t8+=(row.extraE - row.extraD);
+                }
+
+                if (!acumuladoFinal[row.suc]) acumuladoFinal[row.suc] = { c1:0, c2:0, c3:0, c4:0, c5:0, c6:0, c7:0, c8:0 };
+                const a = acumuladoFinal[row.suc];
+                if(emp==='SEAC'){ a.c1+=row.efec; a.c2+=row.cantE; }
+                if(emp==='PAGO FÁCIL'){ a.c1+=row.deb; a.c2+=row.cantD; }
+                if(emp==='COBRO EXPRESS'){
+                    a.c1+=(row.efec + row.deb - row.dev); a.c2+=row.cantTot; a.c3+=row.deb; a.c4+=row.cantD; a.c5+=row.efec; a.c6+=row.cantE; a.c7+=row.dev; a.c8+=(row.extraE - row.extraD);
+                }
+            });
+
+            html += `</tbody><tfoot style="background:#f1f5f9; font-weight:900;"><tr><td colspan="3" style="text-align:right; font-size:10px;">TOTAL DÍA:</td>${getFooter(emp, t1, t2, t3, t4, t5, t6, t7, t8)}</tr></tfoot></table></div>`;
+        });
+
+        // RESUMEN FINAL
+        const isSeac = emp === 'SEAC';
+        const [dY, dM, dD] = d.split('-'); const [hY, hM, hD] = h.split('-');
+        html += `<div class="resumen-final">
+                    <h3>📉 RESUMEN ACUMULADO POR LOCAL (${emp})</h3>
+                    <p>Periodo: ${dD}/${dM}/${dY} al ${hD}/${hM}/${hY}</p>
+                    <table>
+                        <thead><tr><th>LOCAL / SUCURSAL</th>${getHeaders(emp)}</tr></thead>
+                        <tbody>`;
+        
+        let f1=0, f2=0, f3=0, f4=0, f5=0, f6=0, f7=0, f8=0;
+        Object.keys(acumuladoFinal).forEach(suc => {
+            const a = acumuladoFinal[suc];
+            f1+=a.c1; f2+=a.c2; f3+=a.c3; f4+=a.c4; f5+=a.c5; f6+=a.c6; f7+=a.c7; f8+=a.c8;
+            html += `<tr><td style="font-weight:900; text-align:left;">${suc}</td>${getResumenRow(emp, a)}</tr>`;
+        });
+
+        html += `</tbody><tfoot style="background:#1e40af; color:#ffffff !important; font-weight:900;"><tr><td>TOTALES COLUMNAS</td>${getFooter(emp, f1, f2, f3, f4, f5, f6, f7, f8)}</tr></tfoot></table></div>`;
+        container.innerHTML = html;
+    }
+
+    function getHeaders(e) {
+        if (e === 'SEAC') return `<th style="text-align:right;">IMPORTE</th><th style="text-align:center;">CANT</th>`;
+        if (e === 'PAGO FÁCIL') return `<th style="text-align:right;">DÉBITO</th><th style="text-align:center;">CANT D</th>`;
+        if (e === 'COBRO EXPRESS') return `<th>TOTAL COBRADO</th><th>TOTAL CANT</th><th>MONTO DEB</th><th>CANT DEB</th><th>MONTO EFEC</th><th>CANT EFEC</th><th>DEV</th><th>EXTRA NETO</th>`;
+    }
+
+    function getRowData(r, e) {
+        if (e === 'SEAC') return `<td class="monto">$ ${r.efec.toLocaleString('es-AR')}</td><td style="text-align:center;">${r.cantE}</td>`;
+        if (e === 'PAGO FÁCIL') return `<td class="monto">$ ${r.deb.toLocaleString('es-AR')}</td><td style="text-align:center;">${r.cantD}</td>`;
+        if (e === 'COBRO EXPRESS') return `<td class="monto" style="background:#f0fdf4;">$ ${(r.efec + r.deb - r.dev).toLocaleString('es-AR')}</td><td style="text-align:center; background:#f0fdf4; font-weight:800;">${r.cantTot}</td><td class="monto">$ ${r.deb.toLocaleString('es-AR')}</td><td style="text-align:center;">${r.cantD}</td><td class="monto">$ ${r.efec.toLocaleString('es-AR')}</td><td style="text-align:center;">${r.cantE}</td><td class="monto" style="color:red;">$ ${r.dev.toLocaleString('es-AR')}</td><td class="monto">$ ${(r.extraE - r.extraD).toLocaleString('es-AR')}</td>`;
+    }
+
+    function getResumenRow(e, a) {
+        if (e === 'SEAC') return `<td class="monto">$ ${a.c1.toLocaleString('es-AR')}</td><td style="text-align:center;">${a.c2}</td>`;
+        if (e === 'PAGO FÁCIL') return `<td class="monto">$ ${a.c1.toLocaleString('es-AR')}</td><td style="text-align:center;">${a.c2}</td>`;
+        if (e === 'COBRO EXPRESS') return `<td class="monto" style="background:#f0fdf4;">$ ${a.c1.toLocaleString('es-AR')}</td><td style="text-align:center; background:#f0fdf4; font-weight:800;">${a.c2}</td><td class="monto">$ ${a.c3.toLocaleString('es-AR')}</td><td style="text-align:center;">${a.c4}</td><td class="monto">$ ${a.c5.toLocaleString('es-AR')}</td><td style="text-align:center;">${a.c6}</td><td class="monto" style="color:red;">$ ${a.c7.toLocaleString('es-AR')}</td><td class="monto">$ ${a.c8.toLocaleString('es-AR')}</td>`;
+    }
+
+    function getFooter(e, v1, v2, v3, v4, v5, v6, v7, v8) {
+        if (e === 'SEAC' || e === 'PAGO FÁCIL') return `<td class="monto">$ ${v1.toLocaleString('es-AR')}</td><td style="text-align:center;">${v2}</td>`;
+        if (e === 'COBRO EXPRESS') return `<td class="monto">$ ${v1.toLocaleString('es-AR')}</td><td style="text-align:center;">${v2}</td><td class="monto">$ ${v3.toLocaleString('es-AR')}</td><td style="text-align:center;">${v4}</td><td class="monto">$ ${v5.toLocaleString('es-AR')}</td><td style="text-align:center;">${v6}</td><td class="monto">$ ${v7.toLocaleString('es-AR')}</td><td class="monto">$ ${v8.toLocaleString('es-AR')}</td>`;
+    }
+
+    function exportarExcel() {
+        const wb = XLSX.utils.book_new();
+        document.querySelectorAll(".tabla-dia").forEach((t, i) => {
+            const ws = XLSX.utils.table_to_sheet(t);
+            XLSX.utils.book_append_sheet(wb, ws, i === document.querySelectorAll(".tabla-dia").length - 1 ? 'Resumen' : `D_${i+1}`);
+        });
+        XLSX.writeFile(wb, `Informe_${document.getElementById('select-empresa').value}.xlsx`);
     }
 </script>

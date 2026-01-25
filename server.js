@@ -234,21 +234,10 @@ app.post('/importar/cobroexpress', upload.single('archivo'), async (req, res) =>
 
 // // SECCION PROHIBIDO TOCAR - FIN.
 
-// --- GESTIÓN DE RED (RESTAURADO Y COMPLETO) ---
-
+// APIS DE RED (GUTEN)
 app.get('/api/arbol-configuracion', async (req, res) => {
     try {
-        const result = await pool.query(`
-            SELECT s.id as suc_id, s.nombre as suc_nombre, 
-                   c.id as caja_id, c.nombre_caja, 
-                   t.id as term_id, t.identificador_externo, t.empresa,
-                   COALESCE(t.comision_efectivo_porcentaje, 0) as comision_efectivo_porcentaje, 
-                   COALESCE(t.precio_fijo_debito, 0) as precio_fijo_debito
-            FROM sucursales s 
-            LEFT JOIN cajas c ON s.id = c.sucursal_id 
-            LEFT JOIN terminales t ON c.id = t.caja_id 
-            ORDER BY s.nombre, c.nombre_caja
-        `);
+        const result = await pool.query(`SELECT s.id as suc_id, s.nombre as suc_nombre, c.id as caja_id, c.nombre_caja, t.id as term_id, t.identificador_externo, t.empresa, COALESCE(t.comision_efectivo_porcentaje, 0) as comision_efectivo_porcentaje, COALESCE(t.precio_fijo_debito, 0) as precio_fijo_debito FROM sucursales s LEFT JOIN cajas c ON s.id = c.sucursal_id LEFT JOIN terminales t ON c.id = t.caja_id ORDER BY s.nombre, c.nombre_caja`);
         res.json(result.rows);
     } catch (err) { res.status(500).json({ error: err.message }); }
 });
@@ -256,20 +245,9 @@ app.get('/api/arbol-configuracion', async (req, res) => {
 app.put('/api/:tipo/:id', async (req, res) => {
     const { tipo, id } = req.params;
     try {
-        if (tipo === 'sucursales') {
-            await pool.query('UPDATE sucursales SET nombre = $1 WHERE id = $2', [req.body.nombre, id]);
-        } else if (tipo === 'cajas') {
-            await pool.query('UPDATE cajas SET nombre_caja = $1 WHERE id = $2', [req.body.nombre, id]);
-        } else if (tipo === 'terminales') {
-            await pool.query(`
-                UPDATE terminales 
-                SET identificador_externo = $1, 
-                    comision_efectivo_porcentaje = $2, 
-                    precio_fijo_debito = $3 
-                WHERE id = $4`, 
-                [req.body.identificador, req.body.comision_efec || 0, req.body.precio_deb || 0, id]
-            );
-        }
+        if (tipo === 'sucursales') await pool.query('UPDATE sucursales SET nombre = $1 WHERE id = $2', [req.body.nombre, id]);
+        else if (tipo === 'cajas') await pool.query('UPDATE cajas SET nombre_caja = $1 WHERE id = $2', [req.body.nombre, id]);
+        else if (tipo === 'terminales') await pool.query(`UPDATE terminales SET identificador_externo = $1, comision_efectivo_porcentaje = $2, precio_fijo_debito = $3 WHERE id = $4`, [req.body.identificador, req.body.comision_efec || 0, req.body.precio_deb || 0, id]);
         res.json({ mensaje: 'Ok' });
     } catch (e) { res.status(500).json({ error: e.message }); }
 });
@@ -277,17 +255,9 @@ app.put('/api/:tipo/:id', async (req, res) => {
 app.post('/api/:tipo', async (req, res) => {
     const { tipo } = req.params;
     try {
-        if (tipo === 'sucursales') {
-            await pool.query('INSERT INTO sucursales (nombre) VALUES ($1)', [req.body.nombre]);
-        } else if (tipo === 'cajas') {
-            await pool.query('INSERT INTO cajas (sucursal_id, nombre_caja) VALUES ($1, $2)', [req.body.sucursal_id, req.body.nombre]);
-        } else if (tipo === 'terminales') {
-            await pool.query(`
-                INSERT INTO terminales (caja_id, empresa, identificador_externo, comision_efectivo_porcentaje, precio_fijo_debito) 
-                VALUES ($1, $2, $3, $4, $5)`, 
-                [req.body.caja_id, req.body.empresa, req.body.identificador, req.body.comision_efec || 0, req.body.precio_deb || 0]
-            );
-        }
+        if (tipo === 'sucursales') await pool.query('INSERT INTO sucursales (nombre) VALUES ($1)', [req.body.nombre]);
+        else if (tipo === 'cajas') await pool.query('INSERT INTO cajas (sucursal_id, nombre_caja) VALUES ($1, $2)', [req.body.sucursal_id, req.body.nombre]);
+        else if (tipo === 'terminales') await pool.query(`INSERT INTO terminales (caja_id, empresa, identificador_externo, comision_efectivo_porcentaje, precio_fijo_debito) VALUES ($1, $2, $3, $4, $5)`, [req.body.caja_id, req.body.empresa, req.body.identificador, req.body.comision_efec || 0, req.body.precio_deb || 0]);
         res.json({ mensaje: 'Ok' });
     } catch (e) { res.status(500).json({ error: e.message }); }
 });
@@ -297,17 +267,12 @@ app.delete('/api/:tipo/:id', async (req, res) => {
         const tabla = req.params.tipo === 'sucursales' ? 'sucursales' : (req.params.tipo === 'cajas' ? 'cajas' : 'terminales');
         await pool.query(`DELETE FROM ${tabla} WHERE id = $1`, [req.params.id]);
         res.json({ mensaje: 'Ok' });
-    } catch (e) { res.status(500).json({ error: "No se puede eliminar porque tiene datos asociados." }); }
+    } catch (e) { res.status(500).json({ error: "No se puede eliminar." }); }
 });
 
 app.get('/api/ultimas-fechas', async (req, res) => {
     try {
-        const result = await pool.query(`
-            SELECT empresa, MAX(fecha) as ultima_fecha,
-                MAX(CASE WHEN empresa = 'COBRO EXPRESS' AND (cantidad = 0 OR cantidad IS NULL) THEN fecha ELSE NULL END) as ultima_fecha_diario,
-                MAX(CASE WHEN empresa = 'COBRO EXPRESS' AND cantidad > 0 THEN fecha ELSE NULL END) as ultima_fecha_detalle
-            FROM transacciones GROUP BY empresa
-        `);
+        const result = await pool.query(`SELECT empresa, MAX(fecha) as ultima_fecha, MAX(CASE WHEN empresa = 'COBRO EXPRESS' AND (cantidad = 0 OR cantidad IS NULL) THEN fecha ELSE NULL END) as ultima_fecha_diario, MAX(CASE WHEN empresa = 'COBRO EXPRESS' AND cantidad > 0 THEN fecha ELSE NULL END) as ultima_fecha_detalle FROM transacciones GROUP BY empresa`);
         res.json(result.rows);
     } catch (err) { res.status(500).json({ error: err.message }); }
 });
@@ -315,26 +280,20 @@ app.get('/api/ultimas-fechas', async (req, res) => {
 app.get('/api/informes', async (req, res) => {
     const { desde, hasta } = req.query;
     let query = `
-        SELECT t.fecha, s.nombre as suc_nombre, c.nombre_caja,
-            SUM(CASE WHEN t.empresa = 'PAGO FÁCIL' AND t.medio_pago = 'EFECTIVO' THEN COALESCE(t.cantidad, 1) ELSE 0 END) as pf_cant_e,
-            SUM(CASE WHEN t.empresa = 'PAGO FÁCIL' AND t.medio_pago = 'EFECTIVO' THEN t.importe ELSE 0 END) as pf_monto_e,
-            SUM(CASE WHEN t.empresa = 'SEAC' AND t.medio_pago = 'EFECTIVO' THEN COALESCE(t.cantidad, 1) ELSE 0 END) as seac_cant_e,
-            SUM(CASE WHEN t.empresa = 'SEAC' AND t.medio_pago = 'EFECTIVO' THEN t.importe ELSE 0 END) as seac_monto_e,
-            SUM(CASE WHEN t.empresa = 'COBRO EXPRESS' AND t.medio_pago = 'EFECTIVO' THEN COALESCE(t.cantidad, 1) ELSE 0 END) as ce_cant_e,
-            SUM(CASE WHEN t.empresa = 'COBRO EXPRESS' AND t.medio_pago = 'EFECTIVO' THEN t.importe ELSE 0 END) as ce_monto_e,
-            SUM(CASE WHEN t.empresa = 'COBRO EXPRESS' THEN t.importe_extra_efectivo ELSE 0 END) as ce_extra_e,
-            SUM(CASE WHEN t.empresa = 'COBRO EXPRESS' THEN t.devoluciones ELSE 0 END) as ce_dev,
-            SUM(CASE WHEN t.empresa = 'COBRO EXPRESS' AND t.medio_pago = 'DEBITO' THEN t.importe ELSE 0 END) as ce_monto_d,
-            SUM(CASE WHEN t.empresa = 'COBRO EXPRESS' THEN t.importe_extra_debito ELSE 0 END) as ce_extra_d
+        SELECT t.fecha, s.nombre as suc_nombre, t.identificador_terminal as boca, t.empresa, t.medio_pago,
+            t.importe, COALESCE(t.cantidad, 1) as cantidad, 
+            COALESCE(t.devoluciones, 0) as devoluciones,
+            COALESCE(t.importe_extra_efectivo, 0) as extra_e,
+            COALESCE(t.importe_extra_debito, 0) as extra_d
         FROM transacciones t
-        JOIN terminales term ON t.identificador_terminal = term.identificador_externo
-        JOIN cajas c ON term.caja_id = c.id
-        JOIN sucursales s ON c.sucursal_id = s.id
+        LEFT JOIN terminales term ON t.identificador_terminal = term.identificador_externo
+        LEFT JOIN cajas c ON term.caja_id = c.id
+        LEFT JOIN sucursales s ON c.sucursal_id = s.id
         WHERE t.fecha BETWEEN $1 AND $2
-        GROUP BY t.fecha, s.nombre, c.nombre_caja ORDER BY s.nombre, t.fecha ASC
+        ORDER BY t.fecha ASC, s.nombre ASC, t.identificador_terminal ASC
     `;
     try { const result = await pool.query(query, [desde, hasta]); res.json(result.rows); } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`🚀 v6.50 Activo puerto ${PORT}`));
+app.listen(PORT, () => console.log(`🚀 v6.63 Activo puerto ${PORT}`));
